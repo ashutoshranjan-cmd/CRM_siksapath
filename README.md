@@ -24,7 +24,7 @@ npm run dev                  # Starts on http://localhost:5173
 | Frontend | React 19, Vite 8, Tailwind CSS 4, React Router 7 |
 | Backend  | Express 4, MongoDB, Mongoose, JWT |
 | Design   | Inter font, Material Symbols Outlined |
-| API      | Meta WhatsApp Business API / Twilio WhatsApp Sandbox |
+| API      | Fast2SMS WhatsApp API |
 
 ## Frontend Screens
 
@@ -51,6 +51,7 @@ npm run dev                  # Starts on http://localhost:5173
 - Runtime backend secrets live in `backend/.env`.
 - The local workspace backend is configured to use MongoDB Atlas through `MONGO_URI` in `backend/.env`.
 - `backend/.env.example` and `backend/example.env` remain sanitized templates for setup and documentation.
+- WhatsApp sending now uses Fast2SMS session messaging with `FAST2SMS_API_KEY` and `FAST2SMS_PHONE_NUMBER_ID`.
 
 ## Project Structure
 

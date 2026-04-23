@@ -36,14 +36,9 @@ const env = {
   bulkSendConcurrency: parseInteger(process.env.BULK_SEND_CONCURRENCY, 5),
   defaultCountryCode: (process.env.DEFAULT_COUNTRY_CODE || "91").replace(/\D/g, ""),
   whatsappApiMode: process.env.WHATSAPP_API_MODE || "mock",
-  whatsappProvider: (process.env.WHATSAPP_PROVIDER || "meta").toLowerCase(),
-  whatsappApiVersion: process.env.WHATSAPP_API_VERSION || "v22.0",
-  whatsappPhoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || "",
-  whatsappAccessToken: process.env.WHATSAPP_ACCESS_TOKEN || "",
-  twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || "",
-  twilioAuthToken: process.env.TWILIO_AUTH_TOKEN || "",
-  twilioWhatsappFrom: process.env.TWILIO_WHATSAPP_FROM || "whatsapp:+14155238886",
-  twilioStatusCallbackUrl: process.env.TWILIO_STATUS_CALLBACK_URL || "",
+  whatsappProvider: (process.env.WHATSAPP_PROVIDER || "fast2sms").toLowerCase(),
+  fast2smsApiKey: process.env.FAST2SMS_API_KEY || "",
+  fast2smsPhoneNumberId: process.env.FAST2SMS_PHONE_NUMBER_ID || "",
   defaultSuperAdminName: process.env.DEFAULT_SUPER_ADMIN_NAME || "Super Admin",
   defaultSuperAdminEmail: (
     process.env.DEFAULT_SUPER_ADMIN_EMAIL || "superadmin@gmail.com"
