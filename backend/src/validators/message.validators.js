@@ -1,28 +1,21 @@
 const { body, param, query } = require("express-validator");
-const mongoose = require("mongoose");
 
 const normalizePhoneNumber = require("../utils/normalizePhoneNumber");
 
 const sendMessageValidator = [
-  body("contactId")
-    .optional({ checkFalsy: true })
-    .custom((value) => mongoose.isValidObjectId(value))
-    .withMessage("Contact ID must be a valid MongoDB ObjectId."),
-  body("phoneNumber").custom((value, { req }) => {
-    if (!req.body.contactId && !value) {
-      throw new Error("Phone number is required when contactId is not provided.");
-    }
-
-    if (value) {
+  body("phoneNumber")
+    .trim()
+    .notEmpty()
+    .withMessage("Phone number is required.")
+    .custom((value, { req }) => {
       const normalized = normalizePhoneNumber(value, req.body.countryCode);
 
       if (normalized.length < 10 || normalized.length > 15) {
         throw new Error("Please provide a valid phone number.");
       }
-    }
 
-    return true;
-  }),
+      return true;
+    }),
   body("name")
     .optional({ checkFalsy: true })
     .trim()

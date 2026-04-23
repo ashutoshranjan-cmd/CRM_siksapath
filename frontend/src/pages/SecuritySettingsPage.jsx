@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { authApi } from "../services/api";
+import { toast } from "react-hot-toast";
+// eslint-disable-next-line no-unused-vars
+import { motion } from "framer-motion";
 
 export default function SecuritySettingsPage() {
     const { token, user } = useAuth();
@@ -9,9 +12,8 @@ export default function SecuritySettingsPage() {
         newPassword: "",
         confirmNewPassword: "",
     });
+    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [errorMessage, setErrorMessage] = useState("");
-    const [successMessage, setSuccessMessage] = useState("");
 
     const handleChange = (key) => (event) => {
         setForm((currentForm) => ({
@@ -22,27 +24,29 @@ export default function SecuritySettingsPage() {
 
     const handleSubmit = async (event) => {
         event.preventDefault();
-        setErrorMessage("");
-        setSuccessMessage("");
         setIsSubmitting(true);
 
         try {
             await authApi.updateOwnPassword(form, token);
-            setSuccessMessage("Your super admin password has been updated.");
+            toast.success("Your super admin password has been updated.");
             setForm({
                 currentPassword: "",
                 newPassword: "",
                 confirmNewPassword: "",
             });
         } catch (error) {
-            setErrorMessage(error.message || "Unable to update the password right now.");
+            toast.error(error.message || "Unable to update the password right now.");
         } finally {
             setIsSubmitting(false);
         }
     };
 
     return (
-        <>
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+        >
             <div className="mb-8">
                 <h2 className="text-[32px] font-bold text-on-surface leading-[40px]" style={{ letterSpacing: "-0.02em" }}>
                     Super Admin Security
@@ -68,14 +72,25 @@ export default function SecuritySettingsPage() {
                         <label htmlFor="currentPassword" className="text-xs font-semibold text-on-surface">
                             Current Password
                         </label>
-                        <input
-                            id="currentPassword"
-                            type="password"
-                            value={form.currentPassword}
-                            onChange={handleChange("currentPassword")}
-                            className="w-full border border-outline-variant rounded-lg px-4 py-3 bg-surface text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                            required
-                        />
+                        <div className="relative">
+                            <input
+                                id="currentPassword"
+                                type={showCurrentPassword ? "text" : "password"}
+                                value={form.currentPassword}
+                                onChange={handleChange("currentPassword")}
+                                className="w-full border border-outline-variant rounded-lg pl-4 pr-10 py-3 bg-surface text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                                required
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowCurrentPassword((prev) => !prev)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors focus:outline-none"
+                            >
+                                <span className="material-symbols-outlined text-[20px]">
+                                    {showCurrentPassword ? "visibility" : "visibility_off"}
+                                </span>
+                            </button>
+                        </div>
                     </div>
 
                     <div className="grid gap-5 md:grid-cols-2">
@@ -110,18 +125,6 @@ export default function SecuritySettingsPage() {
                         </div>
                     </div>
 
-                    {errorMessage ? (
-                        <div className="rounded-lg border border-error/20 bg-error-container px-4 py-3 text-sm text-on-error-container">
-                            {errorMessage}
-                        </div>
-                    ) : null}
-
-                    {successMessage ? (
-                        <div className="rounded-lg border border-secondary/20 bg-secondary/10 px-4 py-3 text-sm text-secondary">
-                            {successMessage}
-                        </div>
-                    ) : null}
-
                     <div className="pt-4 border-t border-outline-variant">
                         <button
                             type="submit"
@@ -145,6 +148,6 @@ export default function SecuritySettingsPage() {
                     </ul>
                 </aside>
             </div>
-        </>
+        </motion.div>
     );
 }

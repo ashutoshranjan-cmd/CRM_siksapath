@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { authApi } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { toast } from "react-hot-toast";
+// eslint-disable-next-line no-unused-vars
+import { motion } from "framer-motion";
 
 function getInitials(name = "") {
     const parts = String(name)
@@ -43,8 +46,6 @@ export default function UserManagementPage() {
     const [users, setUsers] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [errorMessage, setErrorMessage] = useState("");
-    const [successMessage, setSuccessMessage] = useState("");
     const [form, setForm] = useState({
         name: "",
         email: "",
@@ -55,20 +56,21 @@ export default function UserManagementPage() {
 
     async function loadUsers() {
         setIsLoading(true);
-        setErrorMessage("");
 
         try {
             const payload = await authApi.listUsers(token);
             setUsers(payload.data.users);
         } catch (error) {
-            setErrorMessage(error.message || "Unable to load users.");
+            toast.error(error.message || "Unable to load users.");
         } finally {
             setIsLoading(false);
         }
     }
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         loadUsers();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [token]);
 
     const handleChange = (key) => (event) => {
@@ -81,8 +83,6 @@ export default function UserManagementPage() {
     const handleSubmit = async (event) => {
         event.preventDefault();
         setIsSubmitting(true);
-        setErrorMessage("");
-        setSuccessMessage("");
 
         try {
             const payload = await authApi.createAdmin(
@@ -97,7 +97,7 @@ export default function UserManagementPage() {
             );
 
             setUsers((currentUsers) => [payload.data.user, ...currentUsers]);
-            setSuccessMessage(`Admin account created for ${payload.data.user.email}.`);
+            toast.success(`Admin account created for ${payload.data.user.email}.`);
             setForm({
                 name: "",
                 email: "",
@@ -106,14 +106,18 @@ export default function UserManagementPage() {
                 crmAccessId: "",
             });
         } catch (error) {
-            setErrorMessage(error.message || "Unable to create the admin account.");
+            toast.error(error.message || "Unable to create the admin account.");
         } finally {
             setIsSubmitting(false);
         }
     };
 
     return (
-        <>
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+        >
             <div className="mb-8">
                 <h2 className="text-[32px] font-bold text-on-surface leading-[40px]" style={{ letterSpacing: "-0.02em" }}>
                     User Management
@@ -122,21 +126,6 @@ export default function UserManagementPage() {
                     Live user data from the backend. Only supported accounts are shown here.
                 </p>
             </div>
-
-            {(errorMessage || successMessage) ? (
-                <div className="mb-6 space-y-3">
-                    {errorMessage ? (
-                        <div className="rounded-xl border border-error/20 bg-error-container px-4 py-3 text-sm text-on-error-container">
-                            {errorMessage}
-                        </div>
-                    ) : null}
-                    {successMessage ? (
-                        <div className="rounded-xl border border-secondary/20 bg-secondary/10 px-4 py-3 text-sm text-secondary">
-                            {successMessage}
-                        </div>
-                    ) : null}
-                </div>
-            ) : null}
 
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
                 <div className="xl:col-span-8 bg-surface-container-lowest rounded-xl border border-surface-variant shadow-[0px_4px_12px_rgba(0,0,0,0.02)] overflow-hidden flex flex-col">
@@ -163,11 +152,30 @@ export default function UserManagementPage() {
                             </thead>
                             <tbody className="divide-y divide-surface-variant">
                                 {isLoading ? (
-                                    <tr>
-                                        <td colSpan={4} className="py-10 px-6 text-center text-sm text-on-surface-variant">
-                                            Loading users...
-                                        </td>
-                                    </tr>
+                                    <>
+                                        {[0, 1, 2, 3].map((i) => (
+                                            <tr key={i} className="animate-pulse">
+                                                <td className="py-4 px-6">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="h-10 w-10 rounded-full bg-surface-variant" />
+                                                        <div>
+                                                            <div className="h-4 w-32 bg-surface-variant rounded mb-2" />
+                                                            <div className="h-3 w-40 bg-surface-variant/60 rounded" />
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="py-4 px-6">
+                                                    <div className="h-5 w-20 bg-surface-variant rounded-full" />
+                                                </td>
+                                                <td className="py-4 px-6">
+                                                    <div className="h-4 w-24 bg-surface-variant rounded" />
+                                                </td>
+                                                <td className="py-4 px-6">
+                                                    <div className="h-4 w-36 bg-surface-variant/60 rounded" />
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </>
                                 ) : users.length === 0 ? (
                                     <tr>
                                         <td colSpan={4} className="py-10 px-6 text-center text-sm text-on-surface-variant">
@@ -297,6 +305,6 @@ export default function UserManagementPage() {
                     </div>
                 </div>
             </div>
-        </>
+        </motion.div >
     );
 }

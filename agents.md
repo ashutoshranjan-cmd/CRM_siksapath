@@ -201,7 +201,7 @@ These are the **source of truth** for visual design. When making UI changes:
 - Bootstrap signup for the first `super_admin`
 - Admin creation and CRM access ID assignment by `super_admin`
 - Login by email or `crmAccessId`
-- Contact save/list APIs for manual number entry
+- Contact save/list APIs were intentionally removed — there is no address book / saved contacts feature
 - Single WhatsApp send API
 - Bulk CSV/XLS/XLSX upload and send API
 - Message history with filters and pagination
@@ -227,8 +227,6 @@ These are the **source of truth** for visual design. When making UI changes:
 | PATCH  | `/api/auth/me/password`            | Super admin updates own password |
 | POST   | `/api/auth/admins`                 | Create admin user               |
 | PATCH  | `/api/auth/users/:userId/access-id`| Assign CRM access ID           |
-| POST   | `/api/contacts`                    | Create new contact              |
-| GET    | `/api/contacts`                    | List contacts                   |
 | POST   | `/api/messages/send`               | Send single WhatsApp message    |
 | POST   | `/api/messages/bulk`               | Bulk send from CSV/XLS          |
 | GET    | `/api/messages/history`            | Message history (paginated)     |
@@ -282,12 +280,11 @@ npm run dev          # Start Express server with nodemon
 
 ### Connecting Frontend to Backend
 
-Frontend is currently **decoupled** — uses static mock data. To connect:
-1. Create API service layer in `frontend/src/services/api.js`
-2. Use `fetch` or `axios` to call backend endpoints
-3. Store JWT token in localStorage after login
-4. Add `Authorization: Bearer <token>` header to requests
-5. Replace static data in page components with API calls
+Frontend is **live-connected** to the backend. To connect a new page:
+1. Use the existing API service layer in `frontend/src/services/api.js`
+2. Use the `useAuth()` context hook to get the JWT token
+3. Add `Authorization: Bearer <token>` header via the `request()` helper (already handled)
+4. There is **no contacts/address-book feature** — users enter phone numbers directly or upload CSV/XLS files
 
 ---
 

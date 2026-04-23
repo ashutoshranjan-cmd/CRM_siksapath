@@ -1,66 +1,19 @@
 const mongoose = require("mongoose");
 
 const env = require("../config/env");
-const Contact = require("../models/contact.model");
 const MessageHistory = require("../models/messageHistory.model");
 const { parseContactsFile } = require("../services/bulkUpload.service");
-const { markContactAsMessaged, upsertContactFromPayload } = require("../services/contact.service");
 const { sendTextMessage } = require("../services/whatsapp.service");
 const asyncHandler = require("../utils/asyncHandler");
 const ApiError = require("../utils/apiError");
 const promisePool = require("../utils/promisePool");
 
-function shouldSaveContact(value, fallback = true) {
-  if (value === undefined) {
-    return fallback;
-  }
-
-  if (typeof value === "boolean") {
-    return value;
-  }
-
-  return String(value).toLowerCase() !== "false";
-}
-
-async function resolveContactForMessage(req) {
-  if (!req.body.contactId) {
-    if (!shouldSaveContact(req.body.saveContact, true)) {
-      return null;
-    }
-
-    return upsertContactFromPayload({
-      ownerId: req.user._id,
-      createdBy: req.user._id,
-      name: req.body.name,
-      phoneNumber: req.body.phoneNumber,
-      countryCode: req.body.countryCode,
-      source: "manual",
-    });
-  }
-
-  const filter = { _id: req.body.contactId };
-
-  if (req.user.role === "admin") {
-    filter.owner = req.user._id;
-  }
-
-  const contact = await Contact.findOne(filter);
-
-  if (!contact) {
-    throw new ApiError(404, "Contact not found.");
-  }
-
-  return contact;
-}
-
 const sendSingleMessage = asyncHandler(async (req, res) => {
-  const contact = await resolveContactForMessage(req);
-  const targetPhoneNumber = contact?.phoneNumber || req.body.phoneNumber;
-  const recipientName = contact?.name || req.body.name || "";
+  const targetPhoneNumber = req.body.phoneNumber;
+  const recipientName = req.body.name || "";
 
   const history = await MessageHistory.create({
     owner: req.user._id,
-    contact: contact?._id || null,
     recipientName,
     phoneNumber: targetPhoneNumber,
     message: req.body.message,
@@ -79,10 +32,6 @@ const sendSingleMessage = asyncHandler(async (req, res) => {
     history.metaResponse = delivery.raw;
     history.sentAt = new Date();
     await history.save();
-
-    if (contact?._id) {
-      await markContactAsMessaged(contact._id);
-    }
 
     res.status(200).json({
       success: true,
@@ -121,26 +70,11 @@ const sendBulkMessages = asyncHandler(async (req, res) => {
   }
 
   const batchId = new mongoose.Types.ObjectId().toString();
-  const saveContacts = shouldSaveContact(req.body.saveContacts, true);
   const results = await promisePool(
     parsedFile.recipients,
     async (recipient) => {
-      let contact = null;
-
-      if (saveContacts) {
-        contact = await upsertContactFromPayload({
-          ownerId: req.user._id,
-          createdBy: req.user._id,
-          name: recipient.name,
-          phoneNumber: recipient.normalizedPhoneNumber,
-          countryCode: recipient.countryCode,
-          source: parsedFile.fileType === "csv" ? "csv" : "excel",
-        });
-      }
-
       const history = await MessageHistory.create({
         owner: req.user._id,
-        contact: contact?._id || null,
         batchId,
         recipientName: recipient.name,
         phoneNumber: recipient.normalizedPhoneNumber,
@@ -160,10 +94,6 @@ const sendBulkMessages = asyncHandler(async (req, res) => {
         history.metaResponse = delivery.raw;
         history.sentAt = new Date();
         await history.save();
-
-        if (contact?._id) {
-          await markContactAsMessaged(contact._id);
-        }
 
         return {
           rowNumber: recipient.rowNumber,
@@ -214,8 +144,13 @@ const sendBulkMessages = asyncHandler(async (req, res) => {
 const getMessageHistory = asyncHandler(async (req, res) => {
   const page = Number.parseInt(req.query.page, 10) || 1;
   const limit = Number.parseInt(req.query.limit, 10) || 20;
-  const skip = (page - 1) * limit;
   const filter = {};
+
+  if (req.query.cursor) {
+    filter._id = { $lt: req.query.cursor };
+  }
+
+  const skip = req.query.cursor ? 0 : (page - 1) * limit;
 
   if (req.user.role === "super_admin" && req.query.ownerId) {
     filter.owner = req.query.ownerId;
@@ -245,13 +180,14 @@ const getMessageHistory = asyncHandler(async (req, res) => {
 
   const [history, total] = await Promise.all([
     MessageHistory.find(filter)
-      .populate("contact", "name phoneNumber normalizedPhoneNumber")
       .populate("owner", "name email role crmAccessId")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit),
     MessageHistory.countDocuments(filter),
   ]);
+
+  const nextCursor = history.length === limit ? history[history.length - 1]._id : null;
 
   res.status(200).json({
     success: true,
@@ -263,6 +199,7 @@ const getMessageHistory = asyncHandler(async (req, res) => {
         limit,
         total,
         totalPages: Math.ceil(total / limit) || 1,
+        nextCursor,
       },
     },
   });
@@ -276,7 +213,6 @@ const getMessageHistoryById = asyncHandler(async (req, res) => {
   }
 
   const history = await MessageHistory.findOne(filter)
-    .populate("contact", "name phoneNumber normalizedPhoneNumber")
     .populate("owner", "name email role crmAccessId");
 
   if (!history) {

@@ -1,57 +1,84 @@
-import { useDeferredValue, useEffect, useState } from "react";
-import { useAuth } from "../context/AuthContext";
-import { messageApi } from "../services/api";
-import { toast } from "react-hot-toast";
-// eslint-disable-next-line no-unused-vars
-import { motion, AnimatePresence } from "framer-motion";
+const fs = require('fs');
+
+let content = fs.readFileSync('src/pages/SentHistoryPage.jsx', 'utf-8');
+
+// 1. Imports
+content = content.replace(
+    'import { motion, AnimatePresence } from "framer-motion";',
+    `import { motion, AnimatePresence } from "framer-motion";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useRef, useCallback } from "react";
+import { useRef, useCallback } from "react";`
+);
 
-function formatDateParts(value) {
-    if (!value) {
-        return {
-            date: "--",
-            time: "--",
-        };
-    }
-
-    const parsedDate = new Date(value);
-
-    return {
-        date: new Intl.DateTimeFormat("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-        }).format(parsedDate),
-        time: new Intl.DateTimeFormat("en-US", {
-            hour: "2-digit",
-            minute: "2-digit",
-        }).format(parsedDate),
-    };
-}
-
-function getStatusStyles(status) {
-    if (status === "sent") {
-        return "bg-secondary/10 text-secondary";
-    }
-
-    if (status === "failed") {
-        return "bg-error-container text-error";
-    }
-
-    return "bg-primary/10 text-primary";
-}
-
-export default function SentHistoryPage() {
-    const { token } = useAuth();
+// 2. State definition and fetch logic
+const originalStateBlock = `    const { token } = useAuth();
+    const [page, setPage] = useState(1);
     const [status, setStatus] = useState("");
     const [search, setSearch] = useState("");
     const deferredSearch = useDeferredValue(search);
+    const [history, setHistory] = useState([]);
+    const [pagination, setPagination] = useState({
+        page: 1,
+        limit: 20,
+        total: 0,
+        totalPages: 1,
+    });
+    const [isLoading, setIsLoading] = useState(true);
 
+    useEffect(() => {
+        let isCancelled = false;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setIsLoading(true);
+
+        messageApi
+            .getHistory(
+                {
+                    page,
+                    limit: 10,
+                    status,
+                    search: deferredSearch.trim(),
+                },
+                token,
+            )
+            .then((payload) => {
+                if (isCancelled) {
+                    return;
+                }
+
+                setHistory(payload.data.history);
+                setPagination(payload.data.pagination);
+            })
+            .catch((error) => {
+                if (isCancelled) {
+                    return;
+                }
+
+                toast.error(error.message || "Unable to load message history.");
+                setHistory([]);
+            })
+            .finally(() => {
+                if (!isCancelled) {
+                    setIsLoading(false);
+                }
+            });
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [deferredSearch, page, status, token]);
+
+    const sentCount = history.filter((item) => item.status === "sent").length;
+    const failedCount = history.filter((item) => item.status === "failed").length;`;
+
+const newStateBlock = `    const { token } = useAuth();
+    const [status, setStatus] = useState("");
+    const [search, setSearch] = useState("");
+    const deferredSearch = useDeferredValue(search);
+    
     const [history, setHistory] = useState([]);
     const [totalRecords, setTotalRecords] = useState(0);
     const [nextCursor, setNextCursor] = useState(null);
-
+    
     const [isLoading, setIsLoading] = useState(true);
     const [isFetchingNextPage, setIsFetchingNextPage] = useState(false);
     const hasNextPage = nextCursor !== null;
@@ -60,7 +87,7 @@ export default function SentHistoryPage() {
 
     const fetchHistory = useCallback(async (cursor = null, isRefresh = false) => {
         if (!token) return;
-
+        
         try {
             if (isRefresh) setIsLoading(true);
             else setIsFetchingNextPage(true);
@@ -75,7 +102,7 @@ export default function SentHistoryPage() {
             setHistory(prev => isRefresh ? payload.data.history : [...prev, ...payload.data.history]);
             setNextCursor(payload.data.pagination.nextCursor);
             setTotalRecords(payload.data.pagination.total);
-
+            
         } catch (error) {
             toast.error(error.message || "Unable to load message history.");
             if (isRefresh) setHistory([]);
@@ -89,7 +116,6 @@ export default function SentHistoryPage() {
         fetchHistory(null, true);
     }, [fetchHistory]);
 
-    // eslint-disable-next-line react-hooks/incompatible-library
     const rowVirtualizer = useVirtualizer({
         count: hasNextPage ? history.length + 1 : history.length,
         getScrollElement: () => parentRef.current,
@@ -97,10 +123,8 @@ export default function SentHistoryPage() {
         overscan: 5,
     });
 
-    const virtualItems = rowVirtualizer.getVirtualItems();
-
     useEffect(() => {
-        const [lastItem] = [...virtualItems].reverse();
+        const [lastItem] = [...rowVirtualizer.getVirtualItems()].reverse();
         if (!lastItem) return;
 
         if (
@@ -116,121 +140,27 @@ export default function SentHistoryPage() {
         fetchHistory,
         history.length,
         isFetchingNextPage,
-        virtualItems,
+        rowVirtualizer.getVirtualItems(),
         nextCursor,
         isLoading
     ]);
 
     const sentCount = history.filter((item) => item.status === "sent").length;
-    const failedCount = history.filter((item) => item.status === "failed").length;
+    const failedCount = history.filter((item) => item.status === "failed").length;`;
 
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-        >
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
-                <div>
-                    <h2 className="text-[32px] font-bold text-on-surface leading-[40px]" style={{ letterSpacing: "-0.02em" }}>
-                        Sent History
-                    </h2>
-                    <p className="text-sm text-on-surface-variant mt-1">
-                        Review and track delivery status of all outbound communications.
-                    </p>
-                </div>
-                <div className="flex items-center gap-3 flex-wrap">
-                    <div className="relative">
-                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">
-                            search
-                        </span>
-                        <input
-                            type="search"
-                            value={search}
-                            onChange={(event) => {
-                                setSearch(event.target.value);
-                            }}
-                            placeholder="Search recipient, phone, or message"
-                            className="pl-10 pr-4 py-2 bg-surface-container-lowest border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent min-w-[260px]"
-                        />
-                    </div>
-                    <div className="relative">
-                        <select
-                            value={status}
-                            onChange={(event) => {
-                                setStatus(event.target.value);
-                            }}
-                            className="appearance-none pl-4 pr-10 py-2 bg-surface-container-lowest border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                        >
-                            <option value="">All Statuses</option>
-                            <option value="pending">Pending</option>
-                            <option value="sent">Sent</option>
-                            <option value="failed">Failed</option>
-                        </select>
-                        <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">
-                            filter_list
-                        </span>
-                    </div>
-                </div>
-            </div>
+content = content.replace(originalStateBlock, newStateBlock);
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-surface-container-lowest rounded-xl p-6 border border-surface-variant shadow-[0_4px_12px_rgba(0,0,0,0.05)]">
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className="w-12 h-12 rounded-full bg-primary-container flex items-center justify-center">
-                            <span className="material-symbols-outlined text-white">history</span>
-                        </div>
-                        <div>
-                            <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Total Records</p>
-                            <h3 className="text-[24px] font-semibold text-on-surface leading-8" style={{ letterSpacing: "-0.01em" }}>
-                                {totalRecords}
-                            </h3>
-                        </div>
-                    </div>
-                    <div className="flex items-center text-on-surface-variant text-sm">
-                        <span className="material-symbols-outlined text-sm mr-1">stacked_bar_chart</span>
-                        <span>Across all pages</span>
-                    </div>
-                </div>
+// Replace generic "setPage(1)" occurrences with "setHistory([]);" -> actually handled by useEffect tracking fetchHistory
+content = content.replace(/setPage\(1\);\n\s*setStatus\(event\.target\.value\);/g, "setStatus(event.target.value);");
+content = content.replace(/setPage\(1\);\n\s*setSearch\(event\.target\.value\);/g, "setSearch(event.target.value);");
 
-                <div className="bg-surface-container-lowest rounded-xl p-6 border border-surface-variant shadow-[0_4px_12px_rgba(0,0,0,0.05)]">
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className="w-12 h-12 rounded-full bg-secondary-container flex items-center justify-center">
-                            <span className="material-symbols-outlined text-on-secondary-container">send</span>
-                        </div>
-                        <div>
-                            <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Sent On This Page</p>
-                            <h3 className="text-[24px] font-semibold text-on-surface leading-8" style={{ letterSpacing: "-0.01em" }}>
-                                {sentCount}
-                            </h3>
-                        </div>
-                    </div>
-                    <div className="flex items-center text-on-surface-variant text-sm">
-                        <span className="material-symbols-outlined text-sm mr-1">page_info</span>
-                        <span>Fetched so far</span>
-                    </div>
-                </div>
+content = content.replace(/{pagination\.total}/g, "{totalRecords}");
+content = content.replace(/Page {pagination\.page} snapshot/g, "Fetched so far");
 
-                <div className="bg-surface-container-lowest rounded-xl p-6 border border-surface-variant shadow-[0_4px_12px_rgba(0,0,0,0.05)]">
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className="w-12 h-12 rounded-full bg-error-container flex items-center justify-center">
-                            <span className="material-symbols-outlined text-error">error</span>
-                        </div>
-                        <div>
-                            <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Failed On This Page</p>
-                            <h3 className="text-[24px] font-semibold text-on-surface leading-8" style={{ letterSpacing: "-0.01em" }}>
-                                {failedCount}
-                            </h3>
-                        </div>
-                    </div>
-                    <div className="flex items-center text-error text-sm">
-                        <span className="material-symbols-outlined text-sm mr-1">warning</span>
-                        <span>Failures need follow-up</span>
-                    </div>
-                </div>
-            </div>
+const tableMatch = content.match(/<div className="bg-surface-container-lowest rounded-xl border border-surface-variant shadow-\[0_4px_12px_rgba\(0,0,0,0\.05\)\] overflow-hidden">[\s\S]*?<\/div>\n\s*<\/div>/);
 
-            <div className="bg-surface-container-lowest rounded-xl border border-surface-variant shadow-[0_4px_12px_rgba(0,0,0,0.05)] overflow-hidden flex flex-col">
+// Replacement UI for Virtual Table
+const newTableUI = `<div className="bg-surface-container-lowest rounded-xl border border-surface-variant shadow-[0_4px_12px_rgba(0,0,0,0.05)] overflow-hidden flex flex-col">
                 {/* Header */}
                 <div className="grid grid-cols-[1.5fr_2fr_1fr_1fr_1fr] bg-surface-container-low border-b border-surface-variant z-10">
                     <div className="py-4 px-6 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Recipient</div>
@@ -244,7 +174,7 @@ export default function SentHistoryPage() {
                 <div ref={parentRef} className="h-[600px] overflow-auto">
                     {isLoading ? (
                         <div className="flex flex-col">
-                            {[1, 2, 3, 4, 5, 6].map(i => (
+                           {[1, 2, 3, 4, 5, 6].map(i => (
                                 <div key={i} className="grid grid-cols-[1.5fr_2fr_1fr_1fr_1fr] border-b border-surface-variant animate-pulse px-6 py-4 items-center gap-4">
                                     <div className="flex flex-col gap-2"><div className="h-4 bg-surface-variant rounded w-3/4"></div><div className="h-3 bg-surface-variant/50 rounded w-1/2"></div></div>
                                     <div className="h-4 bg-surface-variant rounded w-full"></div>
@@ -252,7 +182,7 @@ export default function SentHistoryPage() {
                                     <div className="h-6 w-16 bg-surface-variant rounded-full"></div>
                                     <div className="h-6 w-20 bg-surface-variant rounded-full"></div>
                                 </div>
-                            ))}
+                           ))}
                         </div>
                     ) : history.length === 0 ? (
                         <div className="py-12 px-6 text-center text-on-surface-variant">
@@ -261,7 +191,7 @@ export default function SentHistoryPage() {
                     ) : (
                         <div
                             className="relative w-full text-sm text-on-surface"
-                            style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
+                            style={{ height: \`\${rowVirtualizer.getTotalSize()}px\` }}
                         >
                             {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                                 const isLoaderRow = virtualRow.index > history.length - 1;
@@ -276,8 +206,8 @@ export default function SentHistoryPage() {
                                                 top: 0,
                                                 left: 0,
                                                 width: '100%',
-                                                height: `${virtualRow.size}px`,
-                                                transform: `translateY(${virtualRow.start}px)`
+                                                height: \`\${virtualRow.size}px\`,
+                                                transform: \`translateY(\${virtualRow.start}px)\`
                                             }}
                                             className="grid grid-cols-[1.5fr_2fr_1fr_1fr_1fr] px-6 border-b border-surface-variant items-center bg-surface-container-low/20 animate-pulse gap-4"
                                         >
@@ -300,8 +230,8 @@ export default function SentHistoryPage() {
                                             top: 0,
                                             left: 0,
                                             width: '100%',
-                                            height: `${virtualRow.size}px`,
-                                            transform: `translateY(${virtualRow.start}px)`
+                                            height: \`\${virtualRow.size}px\`,
+                                            transform: \`translateY(\${virtualRow.start}px)\`
                                         }}
                                         className="grid grid-cols-[1.5fr_2fr_1fr_1fr_1fr] border-b border-surface-variant items-center hover:bg-surface-container-low/50 transition-colors"
                                     >
@@ -325,7 +255,7 @@ export default function SentHistoryPage() {
                                             </span>
                                         </div>
                                         <div className="px-6">
-                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold capitalize ${getStatusStyles(entry.status)}`}>
+                                            <span className={\`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold capitalize \${getStatusStyles(entry.status)}\`}>
                                                 {entry.status}
                                             </span>
                                         </div>
@@ -335,9 +265,39 @@ export default function SentHistoryPage() {
                         </div>
                     )}
                 </div>
-            </div>
+            </div>`;
 
+content = content.replace(tableMatch[0], newTableUI);
 
-        </motion.div>
-    );
-}
+// Remove the pagination block
+const paginationBlock = `<div className="px-6 py-4 border-t border-surface-variant bg-surface-container-lowest flex items-center justify-between gap-4">
+                <p className="text-xs text-on-surface-variant">
+                    Showing page {pagination.page} of {pagination.totalPages} ({pagination.total} total records)
+                </p>
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setPage((currentPage) => Math.max(1, currentPage - 1))}
+                        className="px-3 py-2 rounded border border-outline-variant hover:bg-surface-container-low text-on-surface-variant disabled:opacity-50"
+                        disabled={pagination.page <= 1 || isLoading}
+                    >
+                        Prev
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() =>
+                            setPage((currentPage) =>
+                                Math.min(pagination.totalPages || 1, currentPage + 1),
+                            )
+                        }
+                        className="px-3 py-2 rounded border border-outline-variant hover:bg-surface-container-low text-on-surface-variant disabled:opacity-50"
+                        disabled={pagination.page >= pagination.totalPages || isLoading}
+                    >
+                        Next
+                    </button>
+                </div>
+            </div>`;
+content = content.replace(paginationBlock, '');
+
+// Save new file
+fs.writeFileSync('src/pages/SentHistoryPage.jsx', content);

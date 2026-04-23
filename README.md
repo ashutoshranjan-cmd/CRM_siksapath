@@ -41,7 +41,6 @@ npm run dev                  # Starts on http://localhost:5173
 - Bootstrap signup for first super_admin
 - Admin creation and CRM access ID assignment
 - Login by email or crmAccessId
-- Contact save/list APIs
 - Single and bulk WhatsApp send APIs
 - Message history with filters and pagination
 - Security: CORS, Helmet, rate limiting, request sanitizing, validation
