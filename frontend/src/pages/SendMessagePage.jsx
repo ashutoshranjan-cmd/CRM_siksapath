@@ -155,7 +155,7 @@ export default function SendMessagePage() {
                             required
                         />
                         <p className="text-xs text-on-surface-variant">
-                            If you are testing with Twilio sandbox, make sure the recipient has already joined the sandbox from that phone number.
+                            For live delivery, configure your Fast2SMS API key and Fast2SMS phone number ID in the backend environment.
                         </p>
                     </div>
 

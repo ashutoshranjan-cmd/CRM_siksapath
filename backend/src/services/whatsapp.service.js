@@ -4,125 +4,32 @@ const env = require("../config/env");
 const ApiError = require("../utils/apiError");
 const normalizePhoneNumber = require("../utils/normalizePhoneNumber");
 
-function normalizeWhatsappAddress(value) {
-  const trimmedValue = String(value || "").trim();
-
-  if (!trimmedValue) {
-    return "";
-  }
-
-  if (trimmedValue.startsWith("whatsapp:")) {
-    return trimmedValue;
-  }
-
-  if (trimmedValue.startsWith("+")) {
-    return `whatsapp:${trimmedValue}`;
-  }
-
-  const digitsOnly = trimmedValue.replace(/\D/g, "");
-
-  return digitsOnly ? `whatsapp:+${digitsOnly}` : "";
-}
-
-async function sendViaTwilio({ to, message }) {
-  if (!env.twilioAccountSid || !env.twilioAuthToken || !env.twilioWhatsappFrom) {
+async function sendViaFast2Sms({ to, message }) {
+  if (!env.fast2smsApiKey || !env.fast2smsPhoneNumberId) {
     throw new ApiError(
       500,
-      "Twilio credentials are missing. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_WHATSAPP_FROM.",
+      "Fast2SMS credentials are missing. Set FAST2SMS_API_KEY and FAST2SMS_PHONE_NUMBER_ID.",
     );
-  }
-
-  if (message.length > 1600) {
-    throw new ApiError(
-      400,
-      "Twilio WhatsApp sandbox messages must be 1600 characters or fewer.",
-    );
-  }
-
-  const endpoint = `https://api.twilio.com/2010-04-01/Accounts/${env.twilioAccountSid}/Messages.json`;
-  const requestBody = new URLSearchParams({
-    From: normalizeWhatsappAddress(env.twilioWhatsappFrom),
-    To: normalizeWhatsappAddress(`+${to}`),
-    Body: message,
-  });
-
-  if (env.twilioStatusCallbackUrl) {
-    requestBody.set("StatusCallback", env.twilioStatusCallbackUrl);
   }
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
 
   try {
+    const endpoint = new URL("https://www.fast2sms.com/dev/whatsapp-session");
+    endpoint.searchParams.set("phone_number_id", env.fast2smsPhoneNumberId);
+    endpoint.searchParams.set("to", to);
+
     const response = await fetch(endpoint, {
       method: "POST",
       headers: {
-        Authorization: `Basic ${Buffer.from(
-          `${env.twilioAccountSid}:${env.twilioAuthToken}`,
-        ).toString("base64")}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: requestBody.toString(),
-      signal: controller.signal,
-    });
-
-    const payload = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      const error = new ApiError(
-        response.status,
-        payload?.message || "Twilio WhatsApp API request failed.",
-      );
-      error.metaResponse = payload;
-      throw error;
-    }
-
-    return {
-      provider: "twilio",
-      mode: "live",
-      messageId: payload?.sid || crypto.randomUUID(),
-      to,
-      raw: payload,
-    };
-  } catch (error) {
-    if (error.name === "AbortError") {
-      throw new ApiError(504, "Timed out while sending the WhatsApp message.");
-    }
-
-    throw error;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-async function sendViaMeta({ to, message }) {
-  if (!env.whatsappAccessToken || !env.whatsappPhoneNumberId) {
-    throw new ApiError(
-      500,
-      "Meta WhatsApp credentials are missing. Set WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID.",
-    );
-  }
-
-  const endpoint = `https://graph.facebook.com/${env.whatsappApiVersion}/${env.whatsappPhoneNumberId}/messages`;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
-
-  try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${env.whatsappAccessToken}`,
+        authorization: env.fast2smsApiKey,
         "Content-Type": "application/json",
+        Accept: "application/json",
       },
       body: JSON.stringify({
-        messaging_product: "whatsapp",
-        recipient_type: "individual",
-        to,
         type: "text",
-        text: {
-          preview_url: false,
-          body: message,
-        },
+        text: message,
       }),
       signal: controller.signal,
     });
@@ -132,16 +39,20 @@ async function sendViaMeta({ to, message }) {
     if (!response.ok) {
       const error = new ApiError(
         response.status,
-        payload?.error?.message || "Meta WhatsApp API request failed.",
+        payload?.message || "Fast2SMS WhatsApp API request failed.",
       );
       error.metaResponse = payload;
       throw error;
     }
 
     return {
-      provider: "meta",
+      provider: "fast2sms",
       mode: "live",
-      messageId: payload?.messages?.[0]?.id || crypto.randomUUID(),
+      messageId:
+        payload?.data?.message_id ||
+        payload?.message_id ||
+        payload?.id ||
+        crypto.randomUUID(),
       to,
       raw: payload,
     };
@@ -181,15 +92,8 @@ async function sendTextMessage({ to, message }) {
     };
   }
 
-  if (env.whatsappProvider === "twilio") {
-    return sendViaTwilio({
-      to: normalizedPhoneNumber,
-      message: trimmedMessage,
-    });
-  }
-
-  if (env.whatsappProvider === "meta") {
-    return sendViaMeta({
+  if (env.whatsappProvider === "fast2sms") {
+    return sendViaFast2Sms({
       to: normalizedPhoneNumber,
       message: trimmedMessage,
     });
@@ -197,7 +101,7 @@ async function sendTextMessage({ to, message }) {
 
   throw new ApiError(
     500,
-    "Unsupported WhatsApp provider configured. Use WHATSAPP_PROVIDER=meta or WHATSAPP_PROVIDER=twilio.",
+    "Unsupported WhatsApp provider configured. Use WHATSAPP_PROVIDER=fast2sms.",
   );
 }
 

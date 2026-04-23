@@ -76,7 +76,7 @@ CRM/
 | Fonts      | Inter (Google Fonts CDN)                |
 | Backend    | Express 4, MongoDB, Mongoose            |
 | Auth       | JWT bearer tokens                       |
-| Messaging  | Meta WhatsApp Business API (mock/live)  |
+| Messaging  | Fast2SMS WhatsApp API (mock/live)       |
 
 ---
 
@@ -209,9 +209,10 @@ These are the **source of truth** for visual design. When making UI changes:
 
 ### Important Backend Rules
 
-- Keep `WHATSAPP_API_MODE=mock` for local work unless real Meta credentials are available.
+- Keep `WHATSAPP_API_MODE=mock` for local work unless real Fast2SMS credentials are available.
 - Do not hardcode secrets. Use `backend/.env`.
 - In this workspace, `backend/.env` is the live source of truth for `MONGO_URI`; do not duplicate the actual Atlas secret into docs or example files.
+- Fast2SMS WhatsApp sending requires `FAST2SMS_API_KEY` and `FAST2SMS_PHONE_NUMBER_ID` in `backend/.env`.
 - Super admin access is controlled by the first signup or the optional default super admin env values.
 - Admin users should be created by `POST /api/auth/admins` when public signup is disabled.
 - Bulk upload expects a spreadsheet with a phone-like column such as `phone`, `phoneNumber`, `number`, `mobile`, or `whatsappNumber`.
