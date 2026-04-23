@@ -66,4 +66,22 @@
     background-color: #f2f4f8;
     color: #191c1f;
   }
+
+  button,
+  a,
+  label,
+  select,
+  input[type="file"],
+  input[type="checkbox"],
+  input[type="radio"],
+  [role="button"] {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  input:disabled,
+  select:disabled,
+  a.disabled {
+    cursor: not-allowed;
+  }
 }
