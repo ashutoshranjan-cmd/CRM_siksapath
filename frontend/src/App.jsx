@@ -11,9 +11,12 @@ import UserManagementPage from "./pages/UserManagementPage";
 import RolesPage from "./pages/RolesPage";
 import SecuritySettingsPage from "./pages/SecuritySettingsPage";
 
+import { Toaster } from 'react-hot-toast';
+
 export default function App() {
   return (
     <AuthProvider>
+      <Toaster position="top-right" />
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />

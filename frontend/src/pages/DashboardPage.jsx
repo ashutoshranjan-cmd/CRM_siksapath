@@ -2,6 +2,24 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { messageApi } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { toast } from "react-hot-toast";
+// eslint-disable-next-line no-unused-vars
+import { motion } from "framer-motion";
+
+const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1
+        }
+    }
+};
+
+const itemVariants = {
+    hidden: { opacity: 0, y: 15 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.3 } }
+};
 
 function formatDateTime(value) {
     if (!value) {
@@ -35,14 +53,12 @@ export default function DashboardPage() {
         recent: [],
     });
     const [isLoading, setIsLoading] = useState(true);
-    const [errorMessage, setErrorMessage] = useState("");
 
     useEffect(() => {
         let isCancelled = false;
 
         async function loadDashboard() {
             setIsLoading(true);
-            setErrorMessage("");
 
             try {
                 const [totalResponse, sentResponse, failedResponse, pendingResponse, recentResponse] =
@@ -67,7 +83,7 @@ export default function DashboardPage() {
                 });
             } catch (error) {
                 if (!isCancelled) {
-                    setErrorMessage(error.message || "Unable to load dashboard metrics.");
+                    toast.error(error.message || "Unable to load dashboard metrics.");
                 }
             } finally {
                 if (!isCancelled) {
@@ -111,7 +127,11 @@ export default function DashboardPage() {
     ];
 
     return (
-        <>
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+        >
             <div className="mb-8 flex flex-col md:flex-row justify-between md:items-end gap-4">
                 <div>
                     <h2 className="text-[32px] font-bold text-on-surface leading-[40px]" style={{ letterSpacing: "-0.02em" }}>
@@ -130,33 +150,44 @@ export default function DashboardPage() {
                 </Link>
             </div>
 
-            {errorMessage ? (
-                <div className="mb-6 rounded-xl border border-error/20 bg-error-container px-4 py-3 text-sm text-on-error-container">
-                    {errorMessage}
-                </div>
-            ) : null}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-                {cards.map((card) => (
-                    <div
-                        key={card.label}
-                        className="bg-surface-container-lowest rounded-lg border border-outline-variant p-6 shadow-sm"
-                    >
-                        <div className="flex items-center justify-between gap-4 mb-5">
-                            <div className={`p-3 rounded-lg ${card.iconStyle}`}>
-                                <span className="material-symbols-outlined">{card.icon}</span>
+            <motion.div
+                className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+            >
+                {isLoading
+                    ? [0, 1, 2, 3].map((i) => (
+                        <motion.div
+                            key={i}
+                            variants={itemVariants}
+                            className="bg-surface-container-lowest rounded-lg border border-outline-variant p-6 shadow-sm animate-pulse"
+                        >
+                            <div className="flex items-center justify-between gap-4 mb-5">
+                                <div className="w-12 h-12 rounded-lg bg-surface-variant" />
                             </div>
-                            {isLoading ? (
-                                <span className="text-xs text-on-surface-variant">Loading...</span>
-                            ) : null}
-                        </div>
-                        <h3 className="text-sm text-on-surface-variant mb-2">{card.label}</h3>
-                        <p className="text-[32px] font-bold text-on-surface leading-[40px]" style={{ letterSpacing: "-0.02em" }}>
-                            {isLoading ? "--" : card.value}
-                        </p>
-                    </div>
-                ))}
-            </div>
+                            <div className="h-4 w-24 bg-surface-variant rounded mb-3" />
+                            <div className="h-8 w-20 bg-surface-variant rounded" />
+                        </motion.div>
+                    ))
+                    : cards.map((card) => (
+                        <motion.div
+                            key={card.label}
+                            variants={itemVariants}
+                            className="bg-surface-container-lowest rounded-lg border border-outline-variant p-6 shadow-sm"
+                        >
+                            <div className="flex items-center justify-between gap-4 mb-5">
+                                <div className={`p-3 rounded-lg ${card.iconStyle}`}>
+                                    <span className="material-symbols-outlined">{card.icon}</span>
+                                </div>
+                            </div>
+                            <h3 className="text-sm text-on-surface-variant mb-2">{card.label}</h3>
+                            <p className="text-[32px] font-bold text-on-surface leading-[40px]" style={{ letterSpacing: "-0.02em" }}>
+                                {card.value}
+                            </p>
+                        </motion.div>
+                    ))}
+            </motion.div>
 
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
                 <section className="bg-surface-container-lowest rounded-lg border border-outline-variant shadow-sm overflow-hidden">
@@ -165,7 +196,20 @@ export default function DashboardPage() {
                     </div>
                     <div className="divide-y divide-outline-variant">
                         {isLoading ? (
-                            <div className="p-6 text-sm text-on-surface-variant">Loading recent activity...</div>
+                            <div className="divide-y divide-outline-variant">
+                                {[0, 1, 2, 3, 4].map((i) => (
+                                    <div key={i} className="p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-pulse">
+                                        <div className="flex-1">
+                                            <div className="h-4 w-48 bg-surface-variant rounded mb-2" />
+                                            <div className="h-3 w-64 bg-surface-variant/60 rounded" />
+                                        </div>
+                                        <div className="flex flex-col items-end gap-2">
+                                            <div className="h-5 w-16 bg-surface-variant rounded-full" />
+                                            <div className="h-3 w-28 bg-surface-variant/60 rounded" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         ) : overview.recent.length === 0 ? (
                             <div className="p-6 text-sm text-on-surface-variant">
                                 No message activity has been recorded yet.
@@ -183,13 +227,12 @@ export default function DashboardPage() {
                                     </div>
                                     <div className="sm:text-right">
                                         <span
-                                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${
-                                                entry.status === "sent"
-                                                    ? "bg-secondary/10 text-secondary"
-                                                    : entry.status === "failed"
-                                                        ? "bg-error-container text-error"
-                                                        : "bg-primary/10 text-primary"
-                                            }`}
+                                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${entry.status === "sent"
+                                                ? "bg-secondary/10 text-secondary"
+                                                : entry.status === "failed"
+                                                    ? "bg-error-container text-error"
+                                                    : "bg-primary/10 text-primary"
+                                                }`}
                                         >
                                             {entry.status}
                                         </span>
@@ -212,17 +255,25 @@ export default function DashboardPage() {
                             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
                                 Pending Messages
                             </p>
-                            <p className="text-[24px] font-semibold text-on-surface mt-2">
-                                {isLoading ? "--" : overview.pending}
-                            </p>
+                            {isLoading ? (
+                                <div className="h-7 w-12 bg-surface-variant rounded mt-2 animate-pulse" />
+                            ) : (
+                                <p className="text-[24px] font-semibold text-on-surface mt-2">
+                                    {overview.pending}
+                                </p>
+                            )}
                         </div>
                         <div className="rounded-xl border border-outline-variant bg-surface p-4">
                             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
                                 Failed Messages
                             </p>
-                            <p className="text-[24px] font-semibold text-on-surface mt-2">
-                                {isLoading ? "--" : overview.failed}
-                            </p>
+                            {isLoading ? (
+                                <div className="h-7 w-12 bg-surface-variant rounded mt-2 animate-pulse" />
+                            ) : (
+                                <p className="text-[24px] font-semibold text-on-surface mt-2">
+                                    {overview.failed}
+                                </p>
+                            )}
                         </div>
                         <Link
                             to="/sent-history"
@@ -234,6 +285,6 @@ export default function DashboardPage() {
                     </div>
                 </aside>
             </div>
-        </>
+        </motion.div>
     );
 }

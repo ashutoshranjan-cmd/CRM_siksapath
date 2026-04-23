@@ -9,11 +9,6 @@ const messageHistorySchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    contact: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Contact",
-      default: null,
-    },
     batchId: {
       type: String,
       trim: true,

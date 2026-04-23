@@ -1,62 +1,65 @@
 import { useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { messageApi } from "../services/api";
+import { toast } from "react-hot-toast";
+// eslint-disable-next-line no-unused-vars
+import { motion } from "framer-motion";
 
 export default function BulkMessagePage() {
     const { token } = useAuth();
     const fileInputRef = useRef(null);
     const [message, setMessage] = useState("");
-    const [saveContacts, setSaveContacts] = useState(true);
     const [selectedFile, setSelectedFile] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [errorMessage, setErrorMessage] = useState("");
     const [result, setResult] = useState(null);
 
     const handleFileSelect = (event) => {
         const file = event.target.files?.[0] || null;
         setSelectedFile(file);
         setResult(null);
-        setErrorMessage("");
     };
 
     const handleSubmit = async () => {
         if (!selectedFile) {
-            setErrorMessage("Please choose a CSV, XLS, or XLSX file first.");
+            toast.error("Please choose a CSV, XLS, or XLSX file first.");
             return;
         }
 
         if (!message.trim()) {
-            setErrorMessage("Please add the WhatsApp message before starting the campaign.");
+            toast.error("Please add the WhatsApp message before starting the campaign.");
             return;
         }
 
         setIsSubmitting(true);
-        setErrorMessage("");
         setResult(null);
 
         const formData = new FormData();
         formData.append("file", selectedFile);
         formData.append("message", message.trim());
-        formData.append("saveContacts", String(saveContacts));
 
         try {
             const payload = await messageApi.sendBulk(formData, token);
             setResult(payload.data);
+            toast.success("Bulk campaign completed!");
         } catch (error) {
-            setErrorMessage(error.message || "Bulk campaign could not be started.");
+            toast.error(error.message || "Bulk campaign could not be started.");
         } finally {
             setIsSubmitting(false);
         }
     };
 
     return (
-        <>
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+        >
             <div className="mb-8">
                 <h2 className="text-[32px] font-bold text-on-surface leading-[40px]" style={{ letterSpacing: "-0.02em" }}>
                     Bulk Message Campaign
                 </h2>
                 <p className="text-sm text-on-surface-variant mt-2">
-                    Upload your contact list and send a WhatsApp campaign through the backend API.
+                    Upload your recipient list and send a WhatsApp campaign through the backend API.
                 </p>
             </div>
 
@@ -118,15 +121,6 @@ export default function BulkMessagePage() {
                                 {selectedFile ? `${selectedFile.name} (${Math.ceil(selectedFile.size / 1024)} KB)` : "No file selected"}
                             </p>
                         </div>
-                        <label className="border border-outline-variant rounded-lg p-4 flex items-center gap-3 cursor-pointer hover:bg-surface-container transition-colors">
-                            <input
-                                type="checkbox"
-                                checked={saveContacts}
-                                onChange={(event) => setSaveContacts(event.target.checked)}
-                                className="accent-primary"
-                            />
-                            <span className="text-sm text-on-surface">Save uploaded recipients as contacts</span>
-                        </label>
                         <div className="rounded-lg border border-outline-variant bg-surface p-4 text-sm text-on-surface-variant">
                             Expected columns can include <span className="font-semibold text-on-surface">name</span> and a phone-like field such as <span className="font-semibold text-on-surface">phone</span>, <span className="font-semibold text-on-surface">mobile</span>, or <span className="font-semibold text-on-surface">whatsappNumber</span>.
                         </div>
@@ -153,12 +147,6 @@ export default function BulkMessagePage() {
                             {result ? `${result.validRecipients} valid recipients` : "No upload yet"}
                         </span>
                     </div>
-
-                    {errorMessage ? (
-                        <div className="p-6 border-b border-outline-variant bg-error-container text-sm text-on-error-container">
-                            {errorMessage}
-                        </div>
-                    ) : null}
 
                     {result ? (
                         <>
@@ -202,11 +190,10 @@ export default function BulkMessagePage() {
                                                 <td className="py-4 px-6">{entry.phoneNumber}</td>
                                                 <td className="py-4 px-6">
                                                     <span
-                                                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
-                                                            entry.status === "sent"
-                                                                ? "bg-secondary/10 text-secondary"
-                                                                : "bg-error-container text-error"
-                                                        }`}
+                                                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${entry.status === "sent"
+                                                            ? "bg-secondary/10 text-secondary"
+                                                            : "bg-error-container text-error"
+                                                            }`}
                                                     >
                                                         {entry.status}
                                                     </span>
@@ -229,6 +216,6 @@ export default function BulkMessagePage() {
                     )}
                 </div>
             </div>
-        </>
+        </motion.div>
     );
 }

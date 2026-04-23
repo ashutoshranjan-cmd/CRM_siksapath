@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { toast } from "react-hot-toast";
+// eslint-disable-next-line no-unused-vars
+import { motion } from "framer-motion";
 
 export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [identifier, setIdentifier] = useState("");
     const [password, setPassword] = useState("");
-    const [errorMessage, setErrorMessage] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const navigate = useNavigate();
     const location = useLocation();
@@ -30,7 +32,6 @@ export default function LoginPage() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setErrorMessage("");
         setIsSubmitting(true);
 
         try {
@@ -41,7 +42,7 @@ export default function LoginPage() {
 
             navigate(redirectTo, { replace: true });
         } catch (error) {
-            setErrorMessage(error.message || "Unable to sign in right now.");
+            toast.error(error.message || "Unable to sign in right now.");
         } finally {
             setIsSubmitting(false);
         }
@@ -49,7 +50,12 @@ export default function LoginPage() {
 
     return (
         <div className="bg-surface-container-low min-h-screen flex items-center justify-center p-6 font-sans">
-            <main className="w-full max-w-md bg-surface-container-lowest rounded-xl shadow-[0px_8px_24px_rgba(0,0,0,0.12)] border border-outline-variant overflow-hidden">
+            <motion.main
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+                className="w-full max-w-md bg-surface-container-lowest rounded-xl shadow-[0px_8px_24px_rgba(0,0,0,0.12)] border border-outline-variant overflow-hidden"
+            >
                 {/* Header */}
                 <div className="p-6 border-b border-outline-variant/30 text-center">
                     <h1 className="text-[32px] font-bold text-primary tracking-tight mb-1 leading-[40px]" style={{ letterSpacing: '-0.02em' }}>
@@ -86,9 +92,6 @@ export default function LoginPage() {
                             <label className="text-xs font-semibold text-on-surface-variant" htmlFor="password">
                                 Password
                             </label>
-                            <a href="#" className="text-xs font-semibold text-primary hover:text-primary-container transition-colors">
-                                Forgot Password?
-                            </a>
                         </div>
                         <div className="relative">
                             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">lock</span>
@@ -114,25 +117,6 @@ export default function LoginPage() {
                         </div>
                     </div>
 
-                    {errorMessage ? (
-                        <div className="rounded-lg border border-error/20 bg-error-container px-4 py-3 text-sm text-on-error-container">
-                            {errorMessage}
-                        </div>
-                    ) : null}
-
-                    {/* Remember */}
-                    <div className="flex items-center gap-2 mt-1">
-                        <input
-                            id="remember"
-                            name="remember"
-                            type="checkbox"
-                            className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary-fixed-dim bg-surface-container-lowest cursor-pointer accent-primary"
-                        />
-                        <label className="text-sm text-on-surface-variant cursor-pointer select-none" htmlFor="remember">
-                            Remember me for 30 days
-                        </label>
-                    </div>
-
                     {/* Submit */}
                     <button
                         type="submit"
@@ -143,17 +127,7 @@ export default function LoginPage() {
                         <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
                     </button>
                 </form>
-
-                {/* Footer */}
-                <div className="px-6 pb-6 pt-4 text-center border-t border-outline-variant/30 bg-surface-bright">
-                    <p className="text-sm text-on-surface-variant">
-                        Need help accessing your account?{' '}
-                        <a href="#" className="text-primary hover:underline text-xs font-semibold">
-                            Contact Support
-                        </a>
-                    </p>
-                </div>
-            </main>
+            </motion.main>
         </div>
     );
 }

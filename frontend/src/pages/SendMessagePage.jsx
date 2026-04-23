@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { messageApi } from "../services/api";
+import { toast } from "react-hot-toast";
+// eslint-disable-next-line no-unused-vars
+import { motion } from "framer-motion";
 
 const countryOptions = [
     { label: "+1 (US)", value: "1" },
@@ -16,28 +19,22 @@ export default function SendMessagePage() {
         countryCode: "91",
         phoneNumber: "",
         message: "",
-        saveContact: true,
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [errorMessage, setErrorMessage] = useState("");
     const [result, setResult] = useState(null);
 
     const messageLength = form.message.length;
 
     const handleChange = (key) => (event) => {
-        const value =
-            event.target.type === "checkbox" ? event.target.checked : event.target.value;
-
         setForm((currentForm) => ({
             ...currentForm,
-            [key]: value,
+            [key]: event.target.value,
         }));
     };
 
     const handleSubmit = async (event) => {
         event.preventDefault();
         setIsSubmitting(true);
-        setErrorMessage("");
         setResult(null);
 
         try {
@@ -47,7 +44,6 @@ export default function SendMessagePage() {
                     countryCode: form.countryCode,
                     phoneNumber: form.phoneNumber.trim(),
                     message: form.message.trim(),
-                    saveContact: form.saveContact,
                 },
                 token,
             );
@@ -57,21 +53,26 @@ export default function SendMessagePage() {
                 ...currentForm,
                 message: "",
             }));
+            toast.success("Message processed successfully");
         } catch (error) {
-            setErrorMessage(error.message || "Message could not be sent.");
+            toast.error(error.message || "Message could not be sent.");
         } finally {
             setIsSubmitting(false);
         }
     };
 
     return (
-        <>
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+        >
             <div className="mb-8">
                 <h2 className="text-[32px] font-bold text-on-surface mb-2 leading-[40px]" style={{ letterSpacing: "-0.02em" }}>
                     Send Message
                 </h2>
                 <p className="text-base text-on-surface-variant">
-                    Compose and send a single WhatsApp message directly to a contact.
+                    Compose and send a single WhatsApp message directly.
                 </p>
             </div>
 
@@ -80,32 +81,18 @@ export default function SendMessagePage() {
                     onSubmit={handleSubmit}
                     className="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm p-6 flex flex-col gap-6"
                 >
-                    <div className="grid gap-6 md:grid-cols-2">
-                        <div className="flex flex-col gap-3">
-                            <label className="text-xs font-semibold text-on-surface" htmlFor="recipientName">
-                                Recipient Name
-                            </label>
-                            <input
-                                id="recipientName"
-                                type="text"
-                                value={form.name}
-                                onChange={handleChange("name")}
-                                placeholder="Optional display name"
-                                className="h-12 bg-surface border border-outline-variant rounded-lg px-4 py-2 text-sm text-on-surface placeholder:text-outline-variant focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-shadow"
-                            />
-                        </div>
-
-                        <div className="flex items-end">
-                            <label className="inline-flex items-center gap-3 rounded-lg border border-outline-variant px-4 py-3 bg-surface text-sm text-on-surface w-full md:w-auto">
-                                <input
-                                    type="checkbox"
-                                    checked={form.saveContact}
-                                    onChange={handleChange("saveContact")}
-                                    className="accent-primary"
-                                />
-                                Save this recipient in contacts
-                            </label>
-                        </div>
+                    <div className="flex flex-col gap-3">
+                        <label className="text-xs font-semibold text-on-surface" htmlFor="recipientName">
+                            Recipient Name
+                        </label>
+                        <input
+                            id="recipientName"
+                            type="text"
+                            value={form.name}
+                            onChange={handleChange("name")}
+                            placeholder="Optional display name"
+                            className="h-12 bg-surface border border-outline-variant rounded-lg px-4 py-2 text-sm text-on-surface placeholder:text-outline-variant focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-shadow"
+                        />
                     </div>
 
                     <div className="flex flex-col gap-3">
@@ -159,12 +146,6 @@ export default function SendMessagePage() {
                         </p>
                     </div>
 
-                    {errorMessage ? (
-                        <div className="rounded-lg border border-error/20 bg-error-container px-4 py-3 text-sm text-on-error-container">
-                            {errorMessage}
-                        </div>
-                    ) : null}
-
                     <div className="flex justify-end gap-4 mt-4 pt-6 border-t border-surface-container-highest">
                         <button
                             type="button"
@@ -174,7 +155,6 @@ export default function SendMessagePage() {
                                     countryCode: "91",
                                     phoneNumber: "",
                                     message: "",
-                                    saveContact: true,
                                 })
                             }
                             className="px-6 py-2 rounded-lg border border-outline-variant text-on-surface hover:bg-surface-container-low text-xs font-semibold transition-colors"
@@ -234,6 +214,6 @@ export default function SendMessagePage() {
                     )}
                 </aside>
             </div>
-        </>
+        </motion.div>
     );
 }

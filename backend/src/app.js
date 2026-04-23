@@ -30,6 +30,18 @@ app.use(express.urlencoded({ extended: true, limit: env.bodyLimit }));
 app.use(sanitizeRequest);
 app.use("/api", apiLimiter);
 app.use("/api/auth", authLimiter);
+
+// Health check – useful for monitoring which cluster worker handles a request
+app.get("/api/health", (_req, res) => {
+  res.json({
+    success: true,
+    pid: process.pid,
+    uptime: Math.round(process.uptime()),
+    memoryMB: Math.round(process.memoryUsage().rss / 1024 / 1024),
+    timestamp: new Date().toISOString(),
+  });
+});
+
 app.use(routes);
 app.use(notFoundHandler);
 app.use(errorHandler);

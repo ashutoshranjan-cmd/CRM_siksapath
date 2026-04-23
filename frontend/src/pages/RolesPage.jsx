@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { authApi } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { toast } from "react-hot-toast";
+// eslint-disable-next-line no-unused-vars
+import { motion } from "framer-motion";
 
 const supportedRoles = [
     {
@@ -17,11 +20,11 @@ const supportedRoles = [
     {
         key: "admin",
         label: "Admin",
-        description: "Operational user for sending messages, managing contacts, and viewing message history.",
+        description: "Operational user for sending messages, uploading recipients, and viewing message history.",
         color: "bg-secondary/10 text-secondary",
         permissions: [
             "Can send single and bulk messages",
-            "Can access contacts and sent history",
+            "Can access send message, bulk upload, and sent history",
             "Cannot access super admin-only screens",
         ],
     },
@@ -34,7 +37,6 @@ export default function RolesPage() {
         admin: 0,
     });
     const [isLoading, setIsLoading] = useState(true);
-    const [errorMessage, setErrorMessage] = useState("");
 
     useEffect(() => {
         let isCancelled = false;
@@ -64,7 +66,7 @@ export default function RolesPage() {
             })
             .catch((error) => {
                 if (!isCancelled) {
-                    setErrorMessage(error.message || "Unable to load role data.");
+                    toast.error(error.message || "Unable to load role data.");
                 }
             })
             .finally(() => {
@@ -79,7 +81,11 @@ export default function RolesPage() {
     }, [token]);
 
     return (
-        <>
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+        >
             <div className="mb-8">
                 <h2 className="text-[32px] font-bold text-on-surface leading-[40px]" style={{ letterSpacing: "-0.02em" }}>
                     Roles & Permissions
@@ -88,12 +94,6 @@ export default function RolesPage() {
                     This page reflects the actual roles currently supported by the backend authorization rules.
                 </p>
             </div>
-
-            {errorMessage ? (
-                <div className="mb-6 rounded-xl border border-error/20 bg-error-container px-4 py-3 text-sm text-on-error-container">
-                    {errorMessage}
-                </div>
-            ) : null}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 {supportedRoles.map((role) => (
@@ -105,7 +105,11 @@ export default function RolesPage() {
                             <div>
                                 <h3 className="text-[15px] font-semibold text-on-surface">{role.label}</h3>
                                 <p className="text-xs text-on-surface-variant mt-1">
-                                    {isLoading ? "Loading user count..." : `${counts[role.key]} assigned user${counts[role.key] === 1 ? "" : "s"}`}
+                                    {isLoading ? (
+                                        <span className="inline-block h-3 w-28 bg-surface-variant rounded animate-pulse" />
+                                    ) : (
+                                        `${counts[role.key]} assigned user${counts[role.key] === 1 ? "" : "s"}`
+                                    )}
                                 </p>
                             </div>
                         </div>
@@ -128,6 +132,6 @@ export default function RolesPage() {
                     Roles are currently defined by backend code, not by a dynamic role builder. That is why this screen shows the live supported roles instead of placeholder roles or fake assignment counts.
                 </p>
             </div>
-        </>
+        </motion.div >
     );
 }
