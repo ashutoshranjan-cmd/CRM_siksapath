@@ -219,9 +219,29 @@ const updateOwnPassword = asyncHandler(async (req, res) => {
   });
 });
 
+const deleteAdmin = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.userId);
+
+  if (!user) {
+    throw new ApiError(404, "User not found.");
+  }
+
+  if (user.role === "super_admin") {
+    throw new ApiError(403, "Cannot delete a super admin account.");
+  }
+
+  await User.findByIdAndDelete(req.params.userId);
+
+  res.status(200).json({
+    success: true,
+    message: "Admin user deleted successfully.",
+  });
+});
+
 module.exports = {
   assignAccessId,
   createAdmin,
+  deleteAdmin,
   getProfile,
   listUsers,
   login,

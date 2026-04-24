@@ -232,9 +232,10 @@ export default function SentHistoryPage() {
 
             <div className="bg-surface-container-lowest rounded-xl border border-surface-variant shadow-[0_4px_12px_rgba(0,0,0,0.05)] overflow-hidden flex flex-col">
                 {/* Header */}
-                <div className="grid grid-cols-[1.5fr_2fr_1fr_1fr_1fr] bg-surface-container-low border-b border-surface-variant z-10">
+                <div className="grid grid-cols-[1.5fr_2fr_1.5fr_1fr_1fr_1fr] bg-surface-container-low border-b border-surface-variant z-10">
                     <div className="py-4 px-6 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Recipient</div>
                     <div className="py-4 px-6 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Message Preview</div>
+                    <div className="py-4 px-6 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Sent By</div>
                     <div className="py-4 px-6 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Date & Time</div>
                     <div className="py-4 px-6 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Source</div>
                     <div className="py-4 px-6 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Status</div>
@@ -245,9 +246,10 @@ export default function SentHistoryPage() {
                     {isLoading ? (
                         <div className="flex flex-col">
                             {[1, 2, 3, 4, 5, 6].map(i => (
-                                <div key={i} className="grid grid-cols-[1.5fr_2fr_1fr_1fr_1fr] border-b border-surface-variant animate-pulse px-6 py-4 items-center gap-4">
+                                <div key={i} className="grid grid-cols-[1.5fr_2fr_1.5fr_1fr_1fr_1fr] border-b border-surface-variant animate-pulse px-6 py-4 items-center gap-4">
                                     <div className="flex flex-col gap-2"><div className="h-4 bg-surface-variant rounded w-3/4"></div><div className="h-3 bg-surface-variant/50 rounded w-1/2"></div></div>
                                     <div className="h-4 bg-surface-variant rounded w-full"></div>
+                                    <div className="flex flex-col gap-2"><div className="h-4 bg-surface-variant rounded w-1/2"></div><div className="h-3 bg-surface-variant/50 rounded w-1/3"></div></div>
                                     <div className="flex flex-col gap-2"><div className="h-4 bg-surface-variant rounded w-1/2"></div><div className="h-3 bg-surface-variant/50 rounded w-1/3"></div></div>
                                     <div className="h-6 w-16 bg-surface-variant rounded-full"></div>
                                     <div className="h-6 w-20 bg-surface-variant rounded-full"></div>
@@ -279,10 +281,11 @@ export default function SentHistoryPage() {
                                                 height: `${virtualRow.size}px`,
                                                 transform: `translateY(${virtualRow.start}px)`
                                             }}
-                                            className="grid grid-cols-[1.5fr_2fr_1fr_1fr_1fr] px-6 border-b border-surface-variant items-center bg-surface-container-low/20 animate-pulse gap-4"
+                                            className="grid grid-cols-[1.5fr_2fr_1.5fr_1fr_1fr_1fr] px-6 border-b border-surface-variant items-center bg-surface-container-low/20 animate-pulse gap-4"
                                         >
                                             <div className="flex flex-col gap-2"><div className="h-4 bg-surface-variant rounded w-3/4"></div><div className="h-3 bg-surface-variant/50 rounded w-1/2"></div></div>
                                             <div className="h-4 bg-surface-variant rounded w-full"></div>
+                                            <div className="flex flex-col gap-2"><div className="h-4 bg-surface-variant rounded w-1/2"></div><div className="h-3 bg-surface-variant/50 rounded w-1/3"></div></div>
                                             <div className="flex flex-col gap-2"><div className="h-4 bg-surface-variant rounded w-1/2"></div><div className="h-3 bg-surface-variant/50 rounded w-1/3"></div></div>
                                             <div className="h-6 w-16 bg-surface-variant rounded-full"></div>
                                             <div className="h-6 w-20 bg-surface-variant rounded-full"></div>
@@ -303,7 +306,7 @@ export default function SentHistoryPage() {
                                             height: `${virtualRow.size}px`,
                                             transform: `translateY(${virtualRow.start}px)`
                                         }}
-                                        className="grid grid-cols-[1.5fr_2fr_1fr_1fr_1fr] border-b border-surface-variant items-center hover:bg-surface-container-low/50 transition-colors"
+                                        className="grid grid-cols-[1.5fr_2fr_1.5fr_1fr_1fr_1fr] border-b border-surface-variant items-center hover:bg-surface-container-low/50 transition-colors"
                                     >
                                         <div className="px-6">
                                             <p className="font-medium">{entry.phoneNumber}</p>
@@ -312,6 +315,19 @@ export default function SentHistoryPage() {
                                             </p>
                                         </div>
                                         <div className="px-6 line-clamp-2 text-on-surface-variant">{entry.message}</div>
+                                        <div className="px-6 flex flex-col justify-center overflow-hidden">
+                                            {entry.owner?.role === "super_admin" ? (
+                                                <span className="inline-flex items-center gap-1 text-primary-fixed uppercase tracking-wider font-semibold text-[11px] bg-primary-fixed-dim/30 px-2 py-0.5 rounded-full w-fit">
+                                                    <span className="material-symbols-outlined text-[14px]">shield</span>
+                                                    Super Admin
+                                                </span>
+                                            ) : (
+                                                <>
+                                                    <p className="font-medium text-[13px] truncate" title={entry.owner?.name}>{entry.owner?.name || "Unknown User"}</p>
+                                                    <p className="text-[11px] text-on-surface-variant truncate" title={entry.owner?.email}>{entry.owner?.email || "No email"}</p>
+                                                </>
+                                            )}
+                                        </div>
                                         <div className="px-6 whitespace-nowrap">
                                             <p>{date}</p>
                                             <p className="text-xs text-on-surface-variant">{time}</p>

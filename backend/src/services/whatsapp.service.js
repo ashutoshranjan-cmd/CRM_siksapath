@@ -69,14 +69,10 @@ async function sendViaFast2Sms({ to, message }) {
 
 async function sendTextMessage({ to, message }) {
   const normalizedPhoneNumber = normalizePhoneNumber(to);
-  const trimmedMessage = String(message || "").trim();
+  const trimmedMessage = String(message || "This is a default message from CRM.").trim();
 
   if (!normalizedPhoneNumber) {
     throw new ApiError(400, "A valid recipient phone number is required.");
-  }
-
-  if (!trimmedMessage) {
-    throw new ApiError(400, "Message content cannot be empty.");
   }
 
   if (env.whatsappApiMode === "mock") {

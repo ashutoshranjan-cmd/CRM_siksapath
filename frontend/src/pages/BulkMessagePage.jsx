@@ -4,14 +4,49 @@ import { messageApi } from "../services/api";
 import { toast } from "react-hot-toast";
 // eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
+import * as XLSX from "xlsx";
 
 export default function BulkMessagePage() {
     const { token } = useAuth();
     const fileInputRef = useRef(null);
-    const [message, setMessage] = useState("");
     const [selectedFile, setSelectedFile] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [result, setResult] = useState(null);
+
+    const sampleData = [
+        { Name: "Rahul Sharma", Phone: "9876543210", "Country Code": "91" },
+        { Name: "Priya Patel", Phone: "8765432109", "Country Code": "91" },
+        { Name: "Amit Kumar", Phone: "7654321098", "Country Code": "91" },
+        { Name: "Sneha Gupta", Phone: "6543210987", "Country Code": "91" },
+        { Name: "Vikram Singh", Phone: "9988776655", "Country Code": "91" },
+    ];
+
+    const downloadSampleCSV = () => {
+        const csvContent = [
+            "Name,Phone,Country Code",
+            ...sampleData.map((r) => `${r.Name},${r.Phone},${r["Country Code"]}`),
+        ].join("\n");
+
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "bulk_whatsapp_sample.csv";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast.success("Sample CSV downloaded!");
+    };
+
+    const downloadSampleExcel = () => {
+        const ws = XLSX.utils.json_to_sheet(sampleData);
+        ws["!cols"] = [{ wch: 18 }, { wch: 14 }, { wch: 14 }];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Contacts");
+        XLSX.writeFile(wb, "bulk_whatsapp_sample.xlsx");
+        toast.success("Sample Excel downloaded!");
+    };
 
     const handleFileSelect = (event) => {
         const file = event.target.files?.[0] || null;
@@ -25,17 +60,11 @@ export default function BulkMessagePage() {
             return;
         }
 
-        if (!message.trim()) {
-            toast.error("Please add the WhatsApp message before starting the campaign.");
-            return;
-        }
-
         setIsSubmitting(true);
         setResult(null);
 
         const formData = new FormData();
         formData.append("file", selectedFile);
-        formData.append("message", message.trim());
 
         try {
             const payload = await messageApi.sendBulk(formData, token);
@@ -94,20 +123,6 @@ export default function BulkMessagePage() {
                             Browse Files
                         </span>
                     </button>
-
-                    <div className="mt-6">
-                        <label className="block text-xs font-semibold text-on-surface mb-2" htmlFor="bulkMessage">
-                            Campaign Message
-                        </label>
-                        <textarea
-                            id="bulkMessage"
-                            rows={6}
-                            value={message}
-                            onChange={(event) => setMessage(event.target.value)}
-                            placeholder="Write the WhatsApp message that should be sent to every uploaded recipient..."
-                            className="w-full border border-outline-variant rounded-lg px-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary-fixed outline-none text-on-surface text-sm bg-surface resize-y"
-                        />
-                    </div>
                 </div>
 
                 <div className="lg:col-span-12 xl:col-span-4 bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm p-6 flex flex-col">
@@ -124,6 +139,36 @@ export default function BulkMessagePage() {
                         <div className="rounded-lg border border-outline-variant bg-surface p-4 text-sm text-on-surface-variant">
                             Expected columns can include <span className="font-semibold text-on-surface">name</span> and a phone-like field such as <span className="font-semibold text-on-surface">phone</span>, <span className="font-semibold text-on-surface">mobile</span>, or <span className="font-semibold text-on-surface">whatsappNumber</span>.
                         </div>
+
+                        <div className="rounded-xl border border-dashed border-primary/40 bg-primary-fixed/10 p-5">
+                            <div className="flex items-start gap-3 mb-3">
+                                <div className="w-9 h-9 rounded-lg bg-primary-fixed flex items-center justify-center flex-shrink-0">
+                                    <span className="material-symbols-outlined text-primary text-[20px]">description</span>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-semibold text-on-surface">Need a template?</p>
+                                    <p className="text-xs text-on-surface-variant mt-0.5">Download a pre-formatted sample file with example data, fill in your contacts, and upload it.</p>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <button
+                                    type="button"
+                                    onClick={downloadSampleCSV}
+                                    className="flex items-center justify-center gap-1.5 bg-surface-container-lowest hover:bg-surface border border-outline-variant text-on-surface text-xs font-semibold py-2.5 rounded-lg transition-all hover:shadow-sm"
+                                >
+                                    <span className="material-symbols-outlined text-[16px]">download</span>
+                                    CSV
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={downloadSampleExcel}
+                                    className="flex items-center justify-center gap-1.5 bg-surface-container-lowest hover:bg-surface border border-outline-variant text-on-surface text-xs font-semibold py-2.5 rounded-lg transition-all hover:shadow-sm"
+                                >
+                                    <span className="material-symbols-outlined text-[16px]">download</span>
+                                    Excel (.xlsx)
+                                </button>
+                            </div>
+                        </div>
                     </div>
                     <div className="pt-6 mt-6 border-t border-outline-variant">
                         <button
@@ -133,9 +178,9 @@ export default function BulkMessagePage() {
                             className="w-full bg-primary hover:bg-primary/90 text-on-primary py-3 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                             <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
-                                rocket_launch
+                                send
                             </span>
-                            {isSubmitting ? "Sending..." : "Start Campaign"}
+                            {isSubmitting ? "Sending..." : "Send Message"}
                         </button>
                     </div>
                 </div>
@@ -216,6 +261,6 @@ export default function BulkMessagePage() {
                     )}
                 </div>
             </div>
-        </motion.div>
+        </motion.div >
     );
 }

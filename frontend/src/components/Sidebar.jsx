@@ -9,6 +9,7 @@ const navItems = [
     { icon: "group", label: "User Management", path: "/users", roles: ["super_admin"] },
     { icon: "badge", label: "Roles", path: "/roles", roles: ["super_admin"] },
     { icon: "lock_reset", label: "Security", path: "/security", roles: ["super_admin"] },
+    { icon: "electrical_services", label: "Provider", path: "/provider", roles: ["super_admin"] },
 ];
 
 export default function Sidebar({ isOpen, onClose }) {
@@ -37,14 +38,9 @@ export default function Sidebar({ isOpen, onClose }) {
             >
                 {/* Brand */}
                 <div className="p-6 border-b border-slate-800/50">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
-                            <span className="material-symbols-outlined text-white" style={{ fontVariationSettings: "'FILL' 1" }}>hub</span>
-                        </div>
-                        <div>
-                            <h1 className="text-xl font-black text-white tracking-tighter">MarketingCRM</h1>
-                            <p className="text-slate-400 text-xs font-semibold">Enterprise Suite</p>
-                        </div>
+                    <div className="flex flex-col items-center justify-center gap-3 text-center">
+                        <img src="/siksapath.png" alt="Siksapath Logo" className="w-48 h-auto object-contain" />
+                        <p className="text-slate-400 text-xs font-semibold">WhatsApp Marketing Dashboard</p>
                     </div>
                 </div>
 
