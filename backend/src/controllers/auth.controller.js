@@ -197,16 +197,6 @@ const updateOwnPassword = asyncHandler(async (req, res) => {
     throw new ApiError(403, "Only the super admin can update this password.");
   }
 
-  const isPasswordValid = await user.comparePassword(req.body.currentPassword);
-
-  if (!isPasswordValid) {
-    throw new ApiError(401, "Current password is incorrect.");
-  }
-
-  if (req.body.currentPassword === req.body.newPassword) {
-    throw new ApiError(400, "New password must be different from the current password.");
-  }
-
   user.password = req.body.newPassword;
   await user.save();
 
