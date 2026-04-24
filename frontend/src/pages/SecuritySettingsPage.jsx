@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 export default function SecuritySettingsPage() {
     const { token, user } = useAuth();
     const [form, setForm] = useState({
-        currentPassword: "",
+        currentPassword: "superadmin", // Pre-filling as requested
         newPassword: "",
         confirmNewPassword: "",
     });
@@ -75,9 +75,11 @@ export default function SecuritySettingsPage() {
                         <div className="relative">
                             <input
                                 id="currentPassword"
+                                name="currentPassword"
                                 type={showCurrentPassword ? "text" : "password"}
                                 value={form.currentPassword}
                                 onChange={handleChange("currentPassword")}
+                                autoComplete="current-password"
                                 className="w-full border border-outline-variant rounded-lg pl-4 pr-10 py-3 bg-surface text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                                 required
                             />
@@ -100,9 +102,11 @@ export default function SecuritySettingsPage() {
                             </label>
                             <input
                                 id="newPassword"
+                                name="newPassword"
                                 type="password"
                                 value={form.newPassword}
                                 onChange={handleChange("newPassword")}
+                                autoComplete="new-password"
                                 className="w-full border border-outline-variant rounded-lg px-4 py-3 bg-surface text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                                 minLength={8}
                                 required
@@ -115,9 +119,11 @@ export default function SecuritySettingsPage() {
                             </label>
                             <input
                                 id="confirmNewPassword"
+                                name="confirmNewPassword"
                                 type="password"
                                 value={form.confirmNewPassword}
                                 onChange={handleChange("confirmNewPassword")}
+                                autoComplete="new-password"
                                 className="w-full border border-outline-variant rounded-lg px-4 py-3 bg-surface text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                                 minLength={8}
                                 required

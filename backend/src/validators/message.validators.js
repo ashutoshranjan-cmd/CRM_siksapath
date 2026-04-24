@@ -27,18 +27,16 @@ const sendMessageValidator = [
     .matches(/^\d{1,4}$/)
     .withMessage("Country code must contain 1 to 4 digits."),
   body("message")
+    .optional({ checkFalsy: true })
     .trim()
-    .notEmpty()
-    .withMessage("Message is required.")
     .isLength({ max: 4096 })
     .withMessage("Message must be at most 4096 characters."),
 ];
 
 const bulkMessageValidator = [
   body("message")
+    .optional({ checkFalsy: true })
     .trim()
-    .notEmpty()
-    .withMessage("Message is required.")
     .isLength({ max: 4096 })
     .withMessage("Message must be at most 4096 characters."),
   body("file").custom((_value, { req }) => {

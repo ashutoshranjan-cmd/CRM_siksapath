@@ -3,6 +3,7 @@ const express = require("express");
 const {
   assignAccessId,
   createAdmin,
+  deleteAdmin,
   getProfile,
   listUsers,
   login,
@@ -49,6 +50,12 @@ router.patch(
   assignAccessIdValidator,
   validateRequest,
   assignAccessId,
+);
+router.delete(
+  "/admins/:userId",
+  authenticate,
+  authorize("super_admin"),
+  deleteAdmin,
 );
 
 module.exports = router;

@@ -90,6 +90,12 @@ export const authApi = {
       token,
     });
   },
+  deleteAdmin(userId, token) {
+    return request(`/api/auth/admins/${userId}`, {
+      method: "DELETE",
+      token,
+    });
+  },
 };
 
 export const messageApi = {
@@ -109,5 +115,27 @@ export const messageApi = {
   },
   getHistory(params, token) {
     return request(`/api/messages/history${toQueryString(params)}`, { token });
+  },
+};
+
+export const providerApi = {
+  getWalletBalance(token) {
+    return request("/api/provider/fast2sms/wallet", { token });
+  },
+  getBlockedUsers(token) {
+    return request("/api/provider/fast2sms/block", { token });
+  },
+  blockUser(number, token) {
+    return request("/api/provider/fast2sms/block", {
+      method: "POST",
+      body: { number },
+      token,
+    });
+  },
+  unblockUser(number, token) {
+    return request(`/api/provider/fast2sms/block/${number}`, {
+      method: "DELETE",
+      token,
+    });
   },
 };

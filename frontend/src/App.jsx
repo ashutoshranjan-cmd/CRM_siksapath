@@ -10,6 +10,7 @@ import SentHistoryPage from "./pages/SentHistoryPage";
 import UserManagementPage from "./pages/UserManagementPage";
 import RolesPage from "./pages/RolesPage";
 import SecuritySettingsPage from "./pages/SecuritySettingsPage";
+import ProviderSettingsPage from "./pages/ProviderSettingsPage";
 
 import { Toaster } from 'react-hot-toast';
 
@@ -31,6 +32,7 @@ export default function App() {
                 <Route path="users" element={<UserManagementPage />} />
                 <Route path="roles" element={<RolesPage />} />
                 <Route path="security" element={<SecuritySettingsPage />} />
+                <Route path="provider" element={<ProviderSettingsPage />} />
               </Route>
             </Route>
           </Route>

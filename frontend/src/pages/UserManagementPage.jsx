@@ -3,7 +3,7 @@ import { authApi } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "react-hot-toast";
 // eslint-disable-next-line no-unused-vars
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 function getInitials(name = "") {
     const parts = String(name)
@@ -46,6 +46,9 @@ export default function UserManagementPage() {
     const [users, setUsers] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [form, setForm] = useState({
         name: "",
         email: "",
@@ -112,6 +115,22 @@ export default function UserManagementPage() {
         }
     };
 
+    const confirmDelete = async () => {
+        if (!deleteTarget) return;
+        setIsDeleting(true);
+
+        try {
+            await authApi.deleteAdmin(deleteTarget._id, token);
+            setUsers((currentUsers) => currentUsers.filter((u) => u._id !== deleteTarget._id));
+            toast.success("Admin account deleted successfully.");
+        } catch (error) {
+            toast.error(error.message || "Failed to delete the user.");
+        } finally {
+            setIsDeleting(false);
+            setDeleteTarget(null);
+        }
+    };
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -148,6 +167,7 @@ export default function UserManagementPage() {
                                     <th className="py-3 px-6 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Role</th>
                                     <th className="py-3 px-6 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">CRM Access ID</th>
                                     <th className="py-3 px-6 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Last Login</th>
+                                    <th className="py-3 px-6 text-xs font-semibold text-on-surface-variant uppercase tracking-wider w-[100px] text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-surface-variant">
@@ -206,6 +226,18 @@ export default function UserManagementPage() {
                                             </td>
                                             <td className="py-4 px-6 text-sm text-on-surface-variant">
                                                 {formatDate(user.lastLoginAt, "Never logged in")}
+                                            </td>
+                                            <td className="py-4 px-6 text-right">
+                                                {user.role !== "super_admin" && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setDeleteTarget(user)}
+                                                        className="text-error hover:text-error/80 transition-colors p-2 rounded hover:bg-error/10 flex items-center justify-center ml-auto"
+                                                        title="Delete Admin"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[20px]">delete</span>
+                                                    </button>
+                                                )}
                                             </td>
                                         </tr>
                                     ))
@@ -280,15 +312,27 @@ export default function UserManagementPage() {
 
                             <div className="flex flex-col space-y-2">
                                 <label className="text-xs font-semibold text-on-surface" htmlFor="tempPassword">Password</label>
-                                <input
-                                    id="tempPassword"
-                                    type="password"
-                                    value={form.password}
-                                    onChange={handleChange("password")}
-                                    className="w-full px-4 py-2.5 bg-surface border border-outline-variant rounded-lg text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
-                                    minLength={8}
-                                    required
-                                />
+                                <div className="relative">
+                                    <input
+                                        id="tempPassword"
+                                        type={showPassword ? "text" : "password"}
+                                        value={form.password}
+                                        onChange={handleChange("password")}
+                                        className="w-full px-4 py-2.5 bg-surface border border-outline-variant rounded-lg text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all pr-10"
+                                        minLength={8}
+                                        required
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword((prev) => !prev)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors focus:outline-none"
+                                        title={showPassword ? "Hide password" : "Show password"}
+                                    >
+                                        <span className="material-symbols-outlined text-[20px]">
+                                            {showPassword ? "visibility" : "visibility_off"}
+                                        </span>
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="pt-4 mt-2 border-t border-surface-variant">
@@ -305,6 +349,76 @@ export default function UserManagementPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Delete Confirmation Modal */}
+            <AnimatePresence>
+                {deleteTarget && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                        onClick={() => !isDeleting && setDeleteTarget(null)}
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            transition={{ type: "spring", damping: 25, stiffness: 350 }}
+                            className="bg-surface-container-lowest rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-surface-variant"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="p-6">
+                                <div className="flex items-center gap-4 mb-5">
+                                    <div className="w-12 h-12 rounded-full bg-error-container flex items-center justify-center flex-shrink-0">
+                                        <span className="material-symbols-outlined text-error text-[28px]">person_remove</span>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-bold text-on-surface">Delete Admin Account</h3>
+                                        <p className="text-sm text-on-surface-variant">This action cannot be undone.</p>
+                                    </div>
+                                </div>
+
+                                <div className="bg-surface-container rounded-xl p-4 mb-5 border border-surface-variant">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-10 w-10 rounded-full bg-error/10 text-error flex items-center justify-center font-bold text-sm flex-shrink-0">
+                                            {getInitials(deleteTarget.name)}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-semibold text-on-surface truncate">{deleteTarget.name}</p>
+                                            <p className="text-xs text-on-surface-variant truncate">{deleteTarget.email}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <p className="text-sm text-on-surface-variant mb-6">
+                                    Are you sure you want to permanently delete <span className="font-semibold text-on-surface">{deleteTarget.name}</span>? They will lose all access to the CRM immediately.
+                                </p>
+
+                                <div className="flex items-center justify-end gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setDeleteTarget(null)}
+                                        disabled={isDeleting}
+                                        className="px-5 py-2.5 rounded-lg text-sm font-medium text-on-surface-variant hover:bg-surface-container-high transition-colors disabled:opacity-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={confirmDelete}
+                                        disabled={isDeleting}
+                                        className="px-5 py-2.5 rounded-lg text-sm font-semibold bg-error text-white hover:bg-error/90 transition-all flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
+                                    >
+                                        <span className="material-symbols-outlined text-[18px]">{isDeleting ? "progress_activity" : "delete"}</span>
+                                        {isDeleting ? "Deleting..." : "Delete Account"}
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </motion.div >
     );
 }
