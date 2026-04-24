@@ -51,7 +51,6 @@ const assignAccessIdValidator = [
 ];
 
 const updateOwnPasswordValidator = [
-  body("currentPassword").trim().notEmpty().withMessage("Current password is required."),
   body("newPassword")
     .trim()
     .isLength({ min: 8 })

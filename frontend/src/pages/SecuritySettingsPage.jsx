@@ -8,11 +8,11 @@ import { motion } from "framer-motion";
 export default function SecuritySettingsPage() {
     const { token, user } = useAuth();
     const [form, setForm] = useState({
-        currentPassword: "superadmin", // Pre-filling as requested
         newPassword: "",
         confirmNewPassword: "",
     });
-    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleChange = (key) => (event) => {
@@ -30,7 +30,6 @@ export default function SecuritySettingsPage() {
             await authApi.updateOwnPassword(form, token);
             toast.success("Your super admin password has been updated.");
             setForm({
-                currentPassword: "",
                 newPassword: "",
                 confirmNewPassword: "",
             });
@@ -68,66 +67,61 @@ export default function SecuritySettingsPage() {
                         <p className="text-sm text-on-surface mt-2">{user?.email || "superadmin@gmail.com"}</p>
                     </div>
 
-                    <div className="flex flex-col gap-2">
-                        <label htmlFor="currentPassword" className="text-xs font-semibold text-on-surface">
-                            Current Password
-                        </label>
-                        <div className="relative">
-                            <input
-                                id="currentPassword"
-                                name="currentPassword"
-                                type={showCurrentPassword ? "text" : "password"}
-                                value={form.currentPassword}
-                                onChange={handleChange("currentPassword")}
-                                autoComplete="current-password"
-                                className="w-full border border-outline-variant rounded-lg pl-4 pr-10 py-3 bg-surface text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                                required
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowCurrentPassword((prev) => !prev)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors focus:outline-none"
-                            >
-                                <span className="material-symbols-outlined text-[20px]">
-                                    {showCurrentPassword ? "visibility" : "visibility_off"}
-                                </span>
-                            </button>
-                        </div>
-                    </div>
-
                     <div className="grid gap-5 md:grid-cols-2">
                         <div className="flex flex-col gap-2">
                             <label htmlFor="newPassword" className="text-xs font-semibold text-on-surface">
                                 New Password
                             </label>
-                            <input
-                                id="newPassword"
-                                name="newPassword"
-                                type="password"
-                                value={form.newPassword}
-                                onChange={handleChange("newPassword")}
-                                autoComplete="new-password"
-                                className="w-full border border-outline-variant rounded-lg px-4 py-3 bg-surface text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                                minLength={8}
-                                required
-                            />
+                            <div className="relative">
+                                <input
+                                    id="newPassword"
+                                    name="newPassword"
+                                    type={showNewPassword ? "text" : "password"}
+                                    value={form.newPassword}
+                                    onChange={handleChange("newPassword")}
+                                    autoComplete="new-password"
+                                    className="w-full border border-outline-variant rounded-lg pl-4 pr-10 py-3 bg-surface text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                                    minLength={8}
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowNewPassword((prev) => !prev)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors focus:outline-none"
+                                >
+                                    <span className="material-symbols-outlined text-[20px]">
+                                        {showNewPassword ? "visibility" : "visibility_off"}
+                                    </span>
+                                </button>
+                            </div>
                         </div>
 
                         <div className="flex flex-col gap-2">
                             <label htmlFor="confirmNewPassword" className="text-xs font-semibold text-on-surface">
                                 Confirm New Password
                             </label>
-                            <input
-                                id="confirmNewPassword"
-                                name="confirmNewPassword"
-                                type="password"
-                                value={form.confirmNewPassword}
-                                onChange={handleChange("confirmNewPassword")}
-                                autoComplete="new-password"
-                                className="w-full border border-outline-variant rounded-lg px-4 py-3 bg-surface text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                                minLength={8}
-                                required
-                            />
+                            <div className="relative">
+                                <input
+                                    id="confirmNewPassword"
+                                    name="confirmNewPassword"
+                                    type={showConfirmNewPassword ? "text" : "password"}
+                                    value={form.confirmNewPassword}
+                                    onChange={handleChange("confirmNewPassword")}
+                                    autoComplete="new-password"
+                                    className="w-full border border-outline-variant rounded-lg pl-4 pr-10 py-3 bg-surface text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                                    minLength={8}
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowConfirmNewPassword((prev) => !prev)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors focus:outline-none"
+                                >
+                                    <span className="material-symbols-outlined text-[20px]">
+                                        {showConfirmNewPassword ? "visibility" : "visibility_off"}
+                                    </span>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
