@@ -61,10 +61,21 @@ const updateOwnPasswordValidator = [
     .withMessage("New password confirmation does not match."),
 ];
 
+const resetAdminPasswordValidator = [
+  param("userId")
+    .custom((value) => mongoose.isValidObjectId(value))
+    .withMessage("A valid user ID is required."),
+  body("newPassword")
+    .trim()
+    .isLength({ min: 8 })
+    .withMessage("New password must be at least 8 characters long."),
+];
+
 module.exports = {
   assignAccessIdValidator,
   createAdminValidator,
   loginValidator,
+  resetAdminPasswordValidator,
   signupValidator,
   updateOwnPasswordValidator,
 };

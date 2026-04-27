@@ -9,8 +9,8 @@ import BulkMessagePage from "./pages/BulkMessagePage";
 import SentHistoryPage from "./pages/SentHistoryPage";
 import UserManagementPage from "./pages/UserManagementPage";
 import RolesPage from "./pages/RolesPage";
-import SecuritySettingsPage from "./pages/SecuritySettingsPage";
 import ProviderSettingsPage from "./pages/ProviderSettingsPage";
+import ProfilePage from "./pages/ProfilePage";
 
 import { Toaster } from 'react-hot-toast';
 
@@ -28,10 +28,10 @@ export default function App() {
               <Route path="send-message" element={<SendMessagePage />} />
               <Route path="bulk-message" element={<BulkMessagePage />} />
               <Route path="sent-history" element={<SentHistoryPage />} />
+              <Route path="profile" element={<ProfilePage />} />
               <Route element={<ProtectedRoute allowedRoles={["super_admin"]} />}>
                 <Route path="users" element={<UserManagementPage />} />
                 <Route path="roles" element={<RolesPage />} />
-                <Route path="security" element={<SecuritySettingsPage />} />
                 <Route path="provider" element={<ProviderSettingsPage />} />
               </Route>
             </Route>

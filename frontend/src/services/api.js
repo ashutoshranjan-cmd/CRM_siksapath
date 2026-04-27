@@ -96,6 +96,13 @@ export const authApi = {
       token,
     });
   },
+  resetAdminPassword(userId, payload, token) {
+    return request(`/api/auth/admins/${userId}/password`, {
+      method: "PATCH",
+      body: payload,
+      token,
+    });
+  },
 };
 
 export const messageApi = {

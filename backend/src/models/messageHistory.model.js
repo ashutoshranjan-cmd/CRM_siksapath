@@ -44,8 +44,8 @@ const messageHistorySchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "sent", "failed"],
-      default: "pending",
+      enum: ["queued", "pending", "sent", "failed"],
+      default: "queued",
       index: true,
     },
     metaMessageId: {

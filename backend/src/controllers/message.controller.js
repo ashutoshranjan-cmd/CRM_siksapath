@@ -3,61 +3,52 @@ const mongoose = require("mongoose");
 const env = require("../config/env");
 const MessageHistory = require("../models/messageHistory.model");
 const { parseContactsFile } = require("../services/bulkUpload.service");
-const { sendTextMessage } = require("../services/whatsapp.service");
+const { enqueueMessage } = require("../queues/whatsapp.queue");
 const asyncHandler = require("../utils/asyncHandler");
 const ApiError = require("../utils/apiError");
-const promisePool = require("../utils/promisePool");
 
+// -------------------------------------------------------------------------
+// Send a single WhatsApp message
+// Creates the history record with status "queued" and adds a job to the
+// BullMQ queue. The worker picks it up and updates the status to "sent"
+// or "failed" (with automatic retries on transient errors).
+// -------------------------------------------------------------------------
 const sendSingleMessage = asyncHandler(async (req, res) => {
   const targetPhoneNumber = req.body.phoneNumber;
   const recipientName = req.body.name || "";
+  const messageText = req.body.message || "";
 
   const history = await MessageHistory.create({
     owner: req.user._id,
     recipientName,
     phoneNumber: targetPhoneNumber,
-    message: req.body.message,
+    message: messageText || "[Template message]",
     source: "manual",
-    status: "pending",
+    status: "queued",
   });
 
-  try {
-    const delivery = await sendTextMessage({
-      to: targetPhoneNumber,
-      message: req.body.message,
-    });
+  const job = await enqueueMessage({
+    historyId: history._id.toString(),
+    to: targetPhoneNumber,
+    message: messageText || undefined,
+  });
 
-    history.status = "sent";
-    history.metaMessageId = delivery.messageId;
-    history.metaResponse = delivery.raw;
-    history.sentAt = new Date();
-    await history.save();
-
-    res.status(200).json({
-      success: true,
-      message: "WhatsApp message sent successfully.",
-      data: {
-        history,
-        delivery,
-      },
-    });
-  } catch (error) {
-    history.status = "failed";
-    history.errorMessage = error.message;
-    history.metaResponse = error.metaResponse || null;
-    await history.save();
-
-    res.status(error.statusCode || 502).json({
-      success: false,
-      message: "Failed to send WhatsApp message.",
-      error: error.message,
-      data: {
-        history,
-      },
-    });
-  }
+  res.status(202).json({
+    success: true,
+    message: "Message queued for delivery. Check sent history for status updates.",
+    data: {
+      history,
+      jobId: job.id,
+    },
+  });
 });
 
+// -------------------------------------------------------------------------
+// Send bulk WhatsApp messages from a CSV/Excel file
+// Parses the file, creates history records for each recipient with status
+// "queued", and enqueues them all. The worker processes them with
+// concurrency limits and rate-limiting.
+// -------------------------------------------------------------------------
 const sendBulkMessages = asyncHandler(async (req, res) => {
   if (!req.file) {
     throw new ApiError(400, "A CSV or Excel file is required for bulk sending.");
@@ -69,78 +60,56 @@ const sendBulkMessages = asyncHandler(async (req, res) => {
     throw new ApiError(400, "No valid phone numbers were found in the uploaded file.");
   }
 
+  const messageText = req.body.message || "";
   const batchId = new mongoose.Types.ObjectId().toString();
-  const results = await promisePool(
-    parsedFile.recipients,
-    async (recipient) => {
-      const history = await MessageHistory.create({
-        owner: req.user._id,
-        batchId,
-        recipientName: recipient.name,
-        phoneNumber: recipient.normalizedPhoneNumber,
-        message: req.body.message,
-        source: "bulk",
-        status: "pending",
-      });
 
-      try {
-        const delivery = await sendTextMessage({
-          to: recipient.normalizedPhoneNumber,
-          message: req.body.message,
-        });
+  const results = [];
 
-        history.status = "sent";
-        history.metaMessageId = delivery.messageId;
-        history.metaResponse = delivery.raw;
-        history.sentAt = new Date();
-        await history.save();
+  for (const recipient of parsedFile.recipients) {
+    const history = await MessageHistory.create({
+      owner: req.user._id,
+      batchId,
+      recipientName: recipient.name,
+      phoneNumber: recipient.normalizedPhoneNumber,
+      message: messageText || "[Template message]",
+      source: "bulk",
+      status: "queued",
+    });
 
-        return {
-          rowNumber: recipient.rowNumber,
-          recipientName: recipient.name,
-          phoneNumber: recipient.normalizedPhoneNumber,
-          status: "sent",
-          historyId: history._id,
-          messageId: delivery.messageId,
-        };
-      } catch (error) {
-        history.status = "failed";
-        history.errorMessage = error.message;
-        history.metaResponse = error.metaResponse || null;
-        await history.save();
+    const job = await enqueueMessage({
+      historyId: history._id.toString(),
+      to: recipient.normalizedPhoneNumber,
+      message: messageText || undefined,
+    });
 
-        return {
-          rowNumber: recipient.rowNumber,
-          recipientName: recipient.name,
-          phoneNumber: recipient.normalizedPhoneNumber,
-          status: "failed",
-          historyId: history._id,
-          error: error.message,
-        };
-      }
-    },
-    env.bulkSendConcurrency,
-  );
+    results.push({
+      rowNumber: recipient.rowNumber,
+      recipientName: recipient.name,
+      phoneNumber: recipient.normalizedPhoneNumber,
+      status: "queued",
+      historyId: history._id,
+      jobId: job.id,
+    });
+  }
 
-  const sentCount = results.filter((result) => result.status === "sent").length;
-  const failedCount = results.length - sentCount;
-
-  res.status(200).json({
-    success: failedCount === 0,
-    message: `Bulk WhatsApp processing finished. ${sentCount} sent and ${failedCount} failed.`,
+  res.status(202).json({
+    success: true,
+    message: `${results.length} messages queued for delivery. Check sent history for status updates.`,
     data: {
       batchId,
       totalRows: parsedFile.totalRows,
       validRecipients: parsedFile.recipients.length,
       invalidRows: parsedFile.invalidRows,
       duplicateRows: parsedFile.duplicateRows,
-      sentCount,
-      failedCount,
+      queuedCount: results.length,
       resultsPreview: results.slice(0, 50),
     },
   });
 });
 
+// -------------------------------------------------------------------------
+// Get message history (paginated, with cursor support)
+// -------------------------------------------------------------------------
 const getMessageHistory = asyncHandler(async (req, res) => {
   const page = Number.parseInt(req.query.page, 10) || 1;
   const limit = Number.parseInt(req.query.limit, 10) || 20;
@@ -228,9 +197,62 @@ const getMessageHistoryById = asyncHandler(async (req, res) => {
   });
 });
 
+// -------------------------------------------------------------------------
+// Webhook for Fast2SMS / Meta Delivery status updates
+// Receives async status updates so "sent" can transition to "delivered" or "failed"
+// -------------------------------------------------------------------------
+const handleDeliveryWebhook = asyncHandler(async (req, res) => {
+  // Fast2SMS/Meta sends status updates here
+  const payload = req.body;
+
+  try {
+    // Basic Meta Webhook Payload Format Structure Handling
+    // Expected structure has entry -> changes -> value -> statuses -> [status objects]
+    if (payload.entry && payload.entry.length > 0) {
+      for (const entry of payload.entry) {
+        if (entry.changes && entry.changes.length > 0) {
+          for (const change of entry.changes) {
+            if (change.value && change.value.statuses) {
+              for (const status of change.value.statuses) {
+                const messageId = status.id;
+                const messageStatus = status.status; // e.g., 'delivered', 'read', 'failed'
+
+                // Find the history entry by metaMessageId
+                const history = await MessageHistory.findOne({ metaMessageId: messageId });
+                if (history) {
+                  // Only update to failed if the webhook says it failed.
+                  // We don't overwrite queued. We can update sent to delivered or failed.
+                  if (messageStatus === "failed") {
+                    history.status = "failed";
+                    history.errorMessage = "Delivery failed through Meta API. Message rejected or undeliverable.";
+                    if (status.errors) {
+                      history.metaResponse = status;
+                    }
+                  } else if (messageStatus === "delivered" && history.status === "sent") {
+                    // Update from 'sent' to 'delivered' if we have such a status, or just keep 'sent'.
+                    // For now, if we want to stick to the 'sent' state, we do nothing. Un-comment if you use 'delivered' status.
+                    // history.status = "delivered";
+                  }
+                  await history.save();
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Webhook processing error:", error);
+  }
+
+  // Always respond with 200 OK so Meta/Fast2SMS knows we received it
+  res.status(200).send("EVENT_RECEIVED");
+});
+
 module.exports = {
   getMessageHistory,
   getMessageHistoryById,
   sendBulkMessages,
   sendSingleMessage,
+  handleDeliveryWebhook,
 };

@@ -7,6 +7,7 @@ const {
   getProfile,
   listUsers,
   login,
+  resetAdminPassword,
   signup,
   updateOwnPassword,
 } = require("../controllers/auth.controller");
@@ -17,6 +18,7 @@ const {
   assignAccessIdValidator,
   createAdminValidator,
   loginValidator,
+  resetAdminPasswordValidator,
   signupValidator,
   updateOwnPasswordValidator,
 } = require("../validators/auth.validators");
@@ -56,6 +58,14 @@ router.delete(
   authenticate,
   authorize("super_admin"),
   deleteAdmin,
+);
+router.patch(
+  "/admins/:userId/password",
+  authenticate,
+  authorize("super_admin"),
+  resetAdminPasswordValidator,
+  validateRequest,
+  resetAdminPassword,
 );
 
 module.exports = router;

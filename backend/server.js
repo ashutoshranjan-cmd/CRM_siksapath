@@ -2,6 +2,7 @@ const app = require("./src/app");
 const env = require("./src/config/env");
 const connectDatabase = require("./src/config/database");
 const ensureDefaultSuperAdmin = require("./src/services/bootstrap.service");
+const { startWhatsappWorker } = require("./src/queues/whatsapp.worker");
 const mongoose = require("mongoose");
 
 async function startServer() {
@@ -9,12 +10,18 @@ async function startServer() {
     await connectDatabase();
     await ensureDefaultSuperAdmin();
 
+    // Start the BullMQ WhatsApp worker so queued messages get processed
+    const worker = startWhatsappWorker();
+
     const server = app.listen(env.port, () => {
       console.log(`CRM backend running on port ${env.port} in ${env.nodeEnv} mode.`);
     });
 
     const shutdown = async (signal) => {
       console.log(`${signal} received. Closing CRM backend gracefully...`);
+      // Close the worker first to finish in-flight jobs
+      await worker.close();
+      console.log("[WhatsApp Worker] Stopped.");
       server.close(async () => {
         await mongoose.connection.close();
         process.exit(0);

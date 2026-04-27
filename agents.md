@@ -1,6 +1,6 @@
 # CRM Agent Notes
 
-> **Last updated:** 2026-04-23
+> **Last updated:** 2026-04-25
 > This file is the single source of truth for AI agents working on this codebase.
 > Read this BEFORE making any changes.
 
@@ -61,7 +61,9 @@ CRM/
             ├── BulkMessagePage.jsx
             ├── SentHistoryPage.jsx
             ├── UserManagementPage.jsx
-            └── RolesPage.jsx
+            ├── RolesPage.jsx
+            ├── ProfilePage.jsx
+            └── ProviderSettingsPage.jsx
 ```
 
 ---
@@ -76,7 +78,7 @@ CRM/
 | Fonts      | Inter (Google Fonts CDN)                |
 | Backend    | Express 4, MongoDB, Mongoose            |
 | Auth       | JWT bearer tokens                       |
-| Messaging  | Fast2SMS WhatsApp API (mock/live)       |
+| Messaging  | Fast2SMS WhatsApp Cloud API (Meta-verified, live) |
 
 ---
 
@@ -142,8 +144,10 @@ Defined in `App.jsx`. Uses React Router v7 with nested routes:
 /send-message       → SendMessagePage
 /bulk-message       → BulkMessagePage
 /sent-history       → SentHistoryPage
-/users              → UserManagementPage
-/roles              → RolesPage
+/profile            → ProfilePage (all authenticated users)
+/users              → UserManagementPage (super_admin only)
+/roles              → RolesPage (super_admin only)
+/provider           → ProviderSettingsPage (super_admin only)
 ```
 
 All routes under `/` use `DashboardLayout` which renders `Sidebar` + `TopNav` + `<Outlet>`.
@@ -159,7 +163,8 @@ All routes under `/` use `DashboardLayout` which renders `Sidebar` + `TopNav` + 
 
 2. **TopNav** (`components/TopNav.jsx`):
    - White `bg-white` header bar, fixed at top
-   - Search input, notification/settings buttons, user avatar
+   - Displays current user role and email (static, no links)
+   - User avatar with initials on the right
    - Mobile menu toggle button (hidden on lg+)
 
 3. **Page pattern**: Each page is a standalone component that renders directly inside the `<Outlet>`. No wrapper needed — the `DashboardLayout` handles padding.
@@ -200,19 +205,31 @@ These are the **source of truth** for visual design. When making UI changes:
 
 - Bootstrap signup for the first `super_admin`
 - Admin creation and CRM access ID assignment by `super_admin`
-- Login by email or `crmAccessId`
+- Login by email or `crmAccessId` (includes a dynamic reacting mascot UI on error states)
 - Contact save/list APIs were intentionally removed — there is no address book / saved contacts feature
 - Single WhatsApp send API
 - Bulk CSV/XLS/XLSX upload and send API
 - Message history with filters and pagination
 - Rate limiting, CORS, Helmet, payload sanitizing, file validation, and request validation
 
+### Recent Architecture Modifications / UI Adjustments
+
+- **Brand & Logo Deployments:** Custom brand logo (`siksapath.png`) has replaced generic icons within the sidebar and login views. The static browser tab icon has also been updated to `favicon.png`.
+- **Dynamic Mascot UX:** The login feature incorporates a lively mascot whose eye tracks typing and actively shows an angry expressive state when authentication fails. 
+- **Security Updates Simplification:** To resolve bcrypt one-way hashing conflicts in UI flows, the "Current Password" requirement was dropped from the `/api/auth/me/password` backend route. The password change feature is now part of the **ProfilePage** with show/hide visibility toggles.
+- **Profile Page Added:** A comprehensive Profile page (`ProfilePage.jsx`) was added at `/profile`, accessible to all authenticated users via the sidebar. It displays user info (name, email, phone, role, CRM Access ID, account status) and includes a password change form for super admins. The former standalone `SecuritySettingsPage.jsx` was removed since its functionality is now consolidated into the Profile page.
+- **User Management Phone Column:** A "Phone" column was added to the User Management table so admin phone numbers are visible.
+- **Admin Password Reset by Super Admin:** Super admins can now reset any admin user's password directly from the User Management page via a "Reset Password" modal (`PATCH /api/auth/admins/:userId/password`). Admins cannot change their own passwords — only the super admin can do so.
+
 ### Important Backend Rules
 
 - Keep `WHATSAPP_API_MODE=mock` for local work unless real Fast2SMS credentials are available.
 - Do not hardcode secrets. Use `backend/.env`.
 - In this workspace, `backend/.env` is the live source of truth for `MONGO_URI`; do not duplicate the actual Atlas secret into docs or example files.
-- Fast2SMS WhatsApp sending requires `FAST2SMS_API_KEY` and `FAST2SMS_PHONE_NUMBER_ID` in `backend/.env`.
+- Fast2SMS WhatsApp sending uses the Meta-verified Cloud API endpoint (`/dev/whatsapp/{version}/{phone_number_id}/messages`) and requires `FAST2SMS_API_KEY`, `FAST2SMS_PHONE_NUMBER_ID`, `FAST2SMS_API_VERSION`, `FAST2SMS_DEFAULT_TEMPLATE`, and `FAST2SMS_DEFAULT_TEMPLATE_LANG` in `backend/.env`.
+- The integration sends **approved template messages** by default (template `school_catalogue`). Template messages work outside the 24-hour conversation window.
+- **Duplicate-send protection**: The frontend uses a synchronous `useRef` guard in addition to the `isSubmitting` state to prevent any possibility of double API calls from rapid clicks.
+- `WHATSAPP_API_MODE` is set to `live` — every message send hits the real Fast2SMS API and costs money. Switch back to `mock` for local development/testing.
 - Super admin access is controlled by the first signup or the optional default super admin env values.
 - Admin users should be created by `POST /api/auth/admins` when public signup is disabled.
 - Bulk upload expects a spreadsheet with a phone-like column such as `phone`, `phoneNumber`, `number`, `mobile`, or `whatsappNumber`.
@@ -225,6 +242,7 @@ These are the **source of truth** for visual design. When making UI changes:
 | POST   | `/api/auth/login`                  | Login (email or crmAccessId)    |
 | GET    | `/api/auth/me`                     | Get current user profile        |
 | PATCH  | `/api/auth/me/password`            | Super admin updates own password |
+| PATCH  | `/api/auth/admins/:userId/password` | Super admin resets admin password |
 | POST   | `/api/auth/admins`                 | Create admin user               |
 | PATCH  | `/api/auth/users/:userId/access-id`| Assign CRM access ID           |
 | POST   | `/api/messages/send`               | Send single WhatsApp message    |

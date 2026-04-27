@@ -209,6 +209,29 @@ const updateOwnPassword = asyncHandler(async (req, res) => {
   });
 });
 
+const resetAdminPassword = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.userId);
+
+  if (!user) {
+    throw new ApiError(404, "User not found.");
+  }
+
+  if (user.role === "super_admin") {
+    throw new ApiError(403, "Cannot reset a super admin's password from this screen. Use the profile page instead.");
+  }
+
+  user.password = req.body.newPassword;
+  await user.save();
+
+  res.status(200).json({
+    success: true,
+    message: `Password for ${user.name} has been reset successfully.`,
+    data: {
+      user: serializeUser(user),
+    },
+  });
+});
+
 const deleteAdmin = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.userId);
 
@@ -235,6 +258,7 @@ module.exports = {
   getProfile,
   listUsers,
   login,
+  resetAdminPassword,
   signup,
   updateOwnPassword,
 };

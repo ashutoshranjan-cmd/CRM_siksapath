@@ -30,10 +30,11 @@ export default function TopNav() {
                     <p className="text-sm font-semibold text-on-surface">{user?.role === "super_admin" ? "Super Admin" : "Admin"}</p>
                     <p className="text-xs text-on-surface-variant">{user?.email || "No email"}</p>
                 </div>
-                <div className="w-8 h-8 rounded-full bg-primary-container overflow-hidden border border-outline-variant cursor-pointer flex items-center justify-center text-white text-xs font-bold">
+                <div className="w-8 h-8 rounded-full bg-primary-container overflow-hidden border border-outline-variant flex items-center justify-center text-white text-xs font-bold">
                     {getInitials(user?.name)}
                 </div>
             </div>
         </header>
     );
 }
+

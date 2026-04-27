@@ -6,12 +6,28 @@ import { toast } from "react-hot-toast";
 import { motion } from "framer-motion";
 import * as XLSX from "xlsx";
 
+function getQueuedCount(result) {
+    if (!result) {
+        return 0;
+    }
+
+    if (typeof result.queuedCount === "number") {
+        return result.queuedCount;
+    }
+
+    return Array.isArray(result.resultsPreview)
+        ? result.resultsPreview.filter((entry) => entry.status === "queued").length
+        : 0;
+}
+
 export default function BulkMessagePage() {
     const { token } = useAuth();
     const fileInputRef = useRef(null);
     const [selectedFile, setSelectedFile] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const submittingRef = useRef(false);
     const [result, setResult] = useState(null);
+    const queuedCount = getQueuedCount(result);
 
     const sampleData = [
         { Name: "Rahul Sharma", Phone: "9876543210", "Country Code": "91" },
@@ -60,6 +76,9 @@ export default function BulkMessagePage() {
             return;
         }
 
+        // Synchronous ref guard — prevents duplicate bulk sends.
+        if (submittingRef.current) return;
+        submittingRef.current = true;
         setIsSubmitting(true);
         setResult(null);
 
@@ -69,11 +88,12 @@ export default function BulkMessagePage() {
         try {
             const payload = await messageApi.sendBulk(formData, token);
             setResult(payload.data);
-            toast.success("Bulk campaign completed!");
+            toast.success("Bulk campaign queued for delivery.");
         } catch (error) {
             toast.error(error.message || "Bulk campaign could not be started.");
         } finally {
             setIsSubmitting(false);
+            submittingRef.current = false;
         }
     };
 
@@ -170,6 +190,17 @@ export default function BulkMessagePage() {
                             </div>
                         </div>
                     </div>
+
+                    <div className="mt-6 rounded-lg border border-outline-variant bg-surface-container-low p-4 text-sm text-on-surface-variant flex gap-3">
+                        <span className="material-symbols-outlined text-primary shrink-0">video_library</span>
+                        <div>
+                            <p className="font-semibold text-on-surface mb-1">Target Template: <span className="font-mono text-xs bg-surface-variant/30 px-1.5 py-0.5 rounded text-primary">school_catalogue</span></p>
+                            <p className="text-xs opacity-90 leading-relaxed">
+                                A promotional video header will be included with the catalogue template. This template provides school marketing details and bypasses the standard 24-hour window limitation.
+                            </p>
+                        </div>
+                    </div>
+
                     <div className="pt-6 mt-6 border-t border-outline-variant">
                         <button
                             type="button"
@@ -201,12 +232,12 @@ export default function BulkMessagePage() {
                                     <p className="text-sm text-on-surface break-all mt-2">{result.batchId}</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-[0.16em]">Sent</p>
-                                    <p className="text-2xl font-semibold text-on-surface mt-2">{result.sentCount}</p>
+                                    <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-[0.16em]">Queued</p>
+                                    <p className="text-2xl font-semibold text-on-surface mt-2">{queuedCount}</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-[0.16em]">Failed</p>
-                                    <p className="text-2xl font-semibold text-on-surface mt-2">{result.failedCount}</p>
+                                    <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-[0.16em]">Valid Rows</p>
+                                    <p className="text-2xl font-semibold text-on-surface mt-2">{result.validRecipients}</p>
                                 </div>
                                 <div>
                                     <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-[0.16em]">Skipped Rows</p>
@@ -237,6 +268,8 @@ export default function BulkMessagePage() {
                                                     <span
                                                         className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${entry.status === "sent"
                                                             ? "bg-secondary/10 text-secondary"
+                                                            : entry.status === "queued"
+                                                                ? "bg-primary/10 text-primary"
                                                             : "bg-error-container text-error"
                                                             }`}
                                                     >

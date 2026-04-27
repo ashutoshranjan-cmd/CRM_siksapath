@@ -35,6 +35,8 @@ npm run dev                  # Starts on http://localhost:5173
 - **Sent History** — Delivery tracking with filters and pagination
 - **User Management** — Team access and role provisioning
 - **Roles** — Role-based permission management
+- **Profile** — User account details and password management
+- **Provider** — WhatsApp provider configuration
 
 ## Backend Features
 

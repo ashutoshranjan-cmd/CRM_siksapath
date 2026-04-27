@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { messageApi } from "../services/api";
 import { toast } from "react-hot-toast";
@@ -12,14 +12,34 @@ const countryOptions = [
     { label: "+55 (BR)", value: "55" },
 ];
 
+function buildResultSummary(result) {
+    const history = result?.history || null;
+    const delivery = result?.delivery || null;
+    const status = history?.status || (delivery ? "sent" : "queued");
+
+    return {
+        delivery,
+        history,
+        jobId: result?.jobId || null,
+        messageId: delivery?.messageId || history?.metaMessageId || null,
+        provider: delivery?.provider || null,
+        mode: delivery?.mode || null,
+        status,
+        isQueued: !delivery,
+    };
+}
+
 export default function SendMessagePage() {
     const { token } = useAuth();
     const [form, setForm] = useState({
+        name: "",
         countryCode: "91",
         phoneNumber: "",
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const submittingRef = useRef(false);
     const [result, setResult] = useState(null);
+    const resultSummary = buildResultSummary(result);
 
     const handleChange = (key) => (event) => {
         setForm((currentForm) => ({
@@ -30,12 +50,18 @@ export default function SendMessagePage() {
 
     const handleSubmit = async (event) => {
         event.preventDefault();
+
+        // Synchronous ref guard — prevents duplicate sends even if React
+        // hasn't re-rendered the disabled button yet.
+        if (submittingRef.current) return;
+        submittingRef.current = true;
         setIsSubmitting(true);
         setResult(null);
 
         try {
             const payload = await messageApi.sendSingle(
                 {
+                    name: form.name.trim(),
                     countryCode: form.countryCode,
                     phoneNumber: form.phoneNumber.trim(),
                 },
@@ -45,13 +71,15 @@ export default function SendMessagePage() {
             setResult(payload.data);
             setForm((currentForm) => ({
                 ...currentForm,
+                name: "",
                 phoneNumber: "",
             }));
-            toast.success("Message processed successfully");
+            toast.success("Message queued for delivery");
         } catch (error) {
             toast.error(error.message || "Message could not be sent.");
         } finally {
             setIsSubmitting(false);
+            submittingRef.current = false;
         }
     };
 
@@ -75,6 +103,17 @@ export default function SendMessagePage() {
                     onSubmit={handleSubmit}
                     className="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm p-6 flex flex-col gap-6"
                 >
+
+                    <div className="flex flex-col gap-3">
+                        <label className="text-xs font-semibold text-on-surface">Recipient Name (Optional)</label>
+                        <input
+                            type="text"
+                            value={form.name}
+                            onChange={handleChange("name")}
+                            placeholder="e.g. John Doe"
+                            className="w-full h-12 bg-surface border border-outline-variant rounded-lg px-4 py-2 text-sm text-on-surface placeholder:text-outline-variant focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-shadow"
+                        />
+                    </div>
 
                     <div className="flex flex-col gap-3">
                         <label className="text-xs font-semibold text-on-surface">Recipient Phone Number</label>
@@ -106,12 +145,25 @@ export default function SendMessagePage() {
                         </div>
                     </div>
 
+                    <div className="flex flex-col gap-3">
+                        <label className="text-xs font-semibold text-on-surface">Message Preview (Template Data)</label>
+                        <div className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-3 text-sm text-on-surface-variant flex gap-3">
+                            <span className="material-symbols-outlined text-primary shrink-0">video_library</span>
+                            <div>
+                                <p className="font-semibold text-on-surface mb-1">Target Template: <span className="font-mono text-xs bg-surface-variant/30 px-1.5 py-0.5 rounded text-primary">school_catalogue</span></p>
+                                <p className="text-xs opacity-90 leading-relaxed">
+                                    A promotional video header will be included with the catalogue template. This template provides school marketing details and bypasses the standard 24-hour window limitation.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
 
                     <div className="flex justify-end gap-4 mt-4 pt-6 border-t border-surface-container-highest">
                         <button
                             type="button"
                             onClick={() =>
                                 setForm({
+                                    name: "",
                                     countryCode: "91",
                                     phoneNumber: "",
                                 })
@@ -143,26 +195,45 @@ export default function SendMessagePage() {
 
                     {result ? (
                         <div className="space-y-4">
-                            <div className="rounded-xl bg-secondary/10 border border-secondary/20 px-4 py-3">
-                                <p className="text-sm font-semibold text-secondary">Message accepted</p>
+                            <div className={`rounded-xl px-4 py-3 border ${resultSummary.isQueued
+                                ? "bg-primary/10 border-primary/20"
+                                : "bg-secondary/10 border-secondary/20"
+                                }`}>
+                                <p className={`text-sm font-semibold ${resultSummary.isQueued ? "text-primary" : "text-secondary"}`}>
+                                    {resultSummary.isQueued ? "Message queued" : "Message accepted"}
+                                </p>
                                 <p className="text-xs text-on-surface-variant mt-1">
-                                    Provider: {result.delivery.provider} • Mode: {result.delivery.mode}
+                                    {resultSummary.isQueued
+                                        ? "The background worker will process this delivery shortly. Track progress in Sent History."
+                                        : `Provider: ${resultSummary.provider} • Mode: ${resultSummary.mode}`}
                                 </p>
                             </div>
                             <div className="space-y-3 text-sm">
                                 <div>
+                                    <p className="text-xs font-semibold text-on-surface-variant">Current Status</p>
+                                    <p className="text-on-surface capitalize">{resultSummary.status}</p>
+                                </div>
+                                <div>
                                     <p className="text-xs font-semibold text-on-surface-variant">Recipient</p>
                                     <p className="text-on-surface">
-                                        {result.history.recipientName || "Unnamed recipient"} ({result.history.phoneNumber})
+                                        {resultSummary.history?.recipientName || "Unnamed recipient"} ({resultSummary.history?.phoneNumber || "--"})
                                     </p>
                                 </div>
-                                <div>
-                                    <p className="text-xs font-semibold text-on-surface-variant">Message ID</p>
-                                    <p className="text-on-surface break-all">{result.delivery.messageId}</p>
-                                </div>
+                                {resultSummary.jobId && (
+                                    <div>
+                                        <p className="text-xs font-semibold text-on-surface-variant">Queue Job ID</p>
+                                        <p className="text-on-surface break-all">{resultSummary.jobId}</p>
+                                    </div>
+                                )}
+                                {resultSummary.messageId && (
+                                    <div>
+                                        <p className="text-xs font-semibold text-on-surface-variant">Message ID</p>
+                                        <p className="text-on-surface break-all">{resultSummary.messageId}</p>
+                                    </div>
+                                )}
                                 <div>
                                     <p className="text-xs font-semibold text-on-surface-variant">Saved History Entry</p>
-                                    <p className="text-on-surface break-all">{result.history._id}</p>
+                                    <p className="text-on-surface break-all">{resultSummary.history?._id || "--"}</p>
                                 </div>
                             </div>
                         </div>
