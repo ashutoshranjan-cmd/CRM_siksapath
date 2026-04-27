@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const { body, param, query } = require("express-validator");
 
 const normalizePhoneNumber = require("../utils/normalizePhoneNumber");
@@ -59,8 +60,8 @@ const messageHistoryQueryValidator = [
     .withMessage("Limit must be between 1 and 100."),
   query("status")
     .optional({ checkFalsy: true })
-    .isIn(["pending", "sent", "failed"])
-    .withMessage("Status must be pending, sent, or failed."),
+    .isIn(["queued", "pending", "sent", "failed"])
+    .withMessage("Status must be queued, pending, sent, or failed."),
   query("source")
     .optional({ checkFalsy: true })
     .isIn(["manual", "bulk"])

@@ -9,10 +9,10 @@ const supportedRoles = [
     {
         key: "super_admin",
         label: "Super Admin",
-        description: "Full backend access including user provisioning, CRM access ID assignment, and super admin security settings.",
+        description: "Full backend access including user provisioning, CRM access ID assignment, and account management.",
         color: "bg-primary/10 text-primary",
         permissions: [
-            "Can access /users, /roles, and /security",
+            "Can access /users, /roles, and /profile",
             "Can create admin accounts",
             "Can assign CRM access IDs",
         ],

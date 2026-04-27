@@ -39,6 +39,10 @@ function getStatusStyles(status) {
         return "bg-error-container text-error";
     }
 
+    if (status === "queued") {
+        return "text-[#b45309]";
+    }
+
     return "bg-primary/10 text-primary";
 }
 
@@ -163,6 +167,7 @@ export default function SentHistoryPage() {
                             className="appearance-none pl-4 pr-10 py-2 bg-surface-container-lowest border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                         >
                             <option value="">All Statuses</option>
+                            <option value="queued">Queued</option>
                             <option value="pending">Pending</option>
                             <option value="sent">Sent</option>
                             <option value="failed">Failed</option>
@@ -317,7 +322,7 @@ export default function SentHistoryPage() {
                                         <div className="px-6 line-clamp-2 text-on-surface-variant">{entry.message}</div>
                                         <div className="px-6 flex flex-col justify-center overflow-hidden">
                                             {entry.owner?.role === "super_admin" ? (
-                                                <span className="inline-flex items-center gap-1 text-primary-fixed uppercase tracking-wider font-semibold text-[11px] bg-primary-fixed-dim/30 px-2 py-0.5 rounded-full w-fit">
+                                                <span className="inline-flex items-center gap-1 text-primary uppercase tracking-wider font-semibold text-[11px] bg-primary/10 px-2 py-0.5 rounded-full w-fit">
                                                     <span className="material-symbols-outlined text-[14px]">shield</span>
                                                     Super Admin
                                                 </span>

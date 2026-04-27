@@ -5,6 +5,7 @@ const {
   getMessageHistoryById,
   sendBulkMessages,
   sendSingleMessage,
+  handleDeliveryWebhook,
 } = require("../controllers/message.controller");
 const authenticate = require("../middlewares/auth.middleware");
 const authorize = require("../middlewares/authorize.middleware");
@@ -18,6 +19,9 @@ const {
 } = require("../validators/message.validators");
 
 const router = express.Router();
+
+// Webhook must be accessible without our app's JWT token
+router.post("/webhook", handleDeliveryWebhook);
 
 router.use(authenticate, authorize("super_admin", "admin"));
 router.post("/send", sendMessageValidator, validateRequest, sendSingleMessage);

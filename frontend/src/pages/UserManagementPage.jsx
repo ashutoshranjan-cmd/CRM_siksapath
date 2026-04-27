@@ -49,6 +49,10 @@ export default function UserManagementPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [passwordTarget, setPasswordTarget] = useState(null);
+    const [resetPassword, setResetPassword] = useState("");
+    const [showResetPassword, setShowResetPassword] = useState(false);
+    const [isResettingPassword, setIsResettingPassword] = useState(false);
     const [form, setForm] = useState({
         name: "",
         email: "",
@@ -131,6 +135,27 @@ export default function UserManagementPage() {
         }
     };
 
+    const confirmResetPassword = async () => {
+        if (!passwordTarget || !resetPassword) return;
+        setIsResettingPassword(true);
+
+        try {
+            await authApi.resetAdminPassword(
+                passwordTarget._id,
+                { newPassword: resetPassword },
+                token,
+            );
+            toast.success(`Password for ${passwordTarget.name} has been reset.`);
+        } catch (error) {
+            toast.error(error.message || "Failed to reset password.");
+        } finally {
+            setIsResettingPassword(false);
+            setPasswordTarget(null);
+            setResetPassword("");
+            setShowResetPassword(false);
+        }
+    };
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -165,6 +190,7 @@ export default function UserManagementPage() {
                                 <tr className="bg-surface-container-low border-b border-surface-variant">
                                     <th className="py-3 px-6 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">User</th>
                                     <th className="py-3 px-6 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Role</th>
+                                    <th className="py-3 px-6 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Phone</th>
                                     <th className="py-3 px-6 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">CRM Access ID</th>
                                     <th className="py-3 px-6 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Last Login</th>
                                     <th className="py-3 px-6 text-xs font-semibold text-on-surface-variant uppercase tracking-wider w-[100px] text-right">Actions</th>
@@ -191,6 +217,9 @@ export default function UserManagementPage() {
                                                     <div className="h-4 w-24 bg-surface-variant rounded" />
                                                 </td>
                                                 <td className="py-4 px-6">
+                                                    <div className="h-4 w-24 bg-surface-variant rounded" />
+                                                </td>
+                                                <td className="py-4 px-6">
                                                     <div className="h-4 w-36 bg-surface-variant/60 rounded" />
                                                 </td>
                                             </tr>
@@ -198,7 +227,7 @@ export default function UserManagementPage() {
                                     </>
                                 ) : users.length === 0 ? (
                                     <tr>
-                                        <td colSpan={4} className="py-10 px-6 text-center text-sm text-on-surface-variant">
+                                        <td colSpan={6} className="py-10 px-6 text-center text-sm text-on-surface-variant">
                                             No users exist yet besides the current setup.
                                         </td>
                                     </tr>
@@ -222,6 +251,9 @@ export default function UserManagementPage() {
                                                 </span>
                                             </td>
                                             <td className="py-4 px-6 text-sm text-on-surface">
+                                                {user.phoneNumber || "--"}
+                                            </td>
+                                            <td className="py-4 px-6 text-sm text-on-surface">
                                                 {user.crmAccessId || "--"}
                                             </td>
                                             <td className="py-4 px-6 text-sm text-on-surface-variant">
@@ -229,14 +261,24 @@ export default function UserManagementPage() {
                                             </td>
                                             <td className="py-4 px-6 text-right">
                                                 {user.role !== "super_admin" && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setDeleteTarget(user)}
-                                                        className="text-error hover:text-error/80 transition-colors p-2 rounded hover:bg-error/10 flex items-center justify-center ml-auto"
-                                                        title="Delete Admin"
-                                                    >
-                                                        <span className="material-symbols-outlined text-[20px]">delete</span>
-                                                    </button>
+                                                    <div className="flex items-center gap-1 justify-end">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setPasswordTarget(user)}
+                                                            className="text-primary hover:text-primary/80 transition-colors p-2 rounded hover:bg-primary/10 flex items-center justify-center"
+                                                            title="Reset Password"
+                                                        >
+                                                            <span className="material-symbols-outlined text-[20px]">key</span>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setDeleteTarget(user)}
+                                                            className="text-error hover:text-error/80 transition-colors p-2 rounded hover:bg-error/10 flex items-center justify-center"
+                                                            title="Delete Admin"
+                                                        >
+                                                            <span className="material-symbols-outlined text-[20px]">delete</span>
+                                                        </button>
+                                                    </div>
                                                 )}
                                             </td>
                                         </tr>
@@ -412,6 +454,105 @@ export default function UserManagementPage() {
                                     >
                                         <span className="material-symbols-outlined text-[18px]">{isDeleting ? "progress_activity" : "delete"}</span>
                                         {isDeleting ? "Deleting..." : "Delete Account"}
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Reset Password Modal */}
+            <AnimatePresence>
+                {passwordTarget && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                        onClick={() => !isResettingPassword && (setPasswordTarget(null), setResetPassword(""), setShowResetPassword(false))}
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            transition={{ type: "spring", damping: 25, stiffness: 350 }}
+                            className="bg-surface-container-lowest rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-surface-variant"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="p-6">
+                                <div className="flex items-center gap-4 mb-5">
+                                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                        <span className="material-symbols-outlined text-primary text-[28px]">lock_reset</span>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-bold text-on-surface">Reset Admin Password</h3>
+                                        <p className="text-sm text-on-surface-variant">Set a new password for this user.</p>
+                                    </div>
+                                </div>
+
+                                <div className="bg-surface-container rounded-xl p-4 mb-5 border border-surface-variant">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm flex-shrink-0">
+                                            {getInitials(passwordTarget.name)}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-semibold text-on-surface truncate">{passwordTarget.name}</p>
+                                            <p className="text-xs text-on-surface-variant truncate">{passwordTarget.email}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col space-y-2 mb-6">
+                                    <label className="text-xs font-semibold text-on-surface" htmlFor="resetPasswordInput">
+                                        New Password
+                                    </label>
+                                    <div className="relative">
+                                        <input
+                                            id="resetPasswordInput"
+                                            type={showResetPassword ? "text" : "password"}
+                                            value={resetPassword}
+                                            onChange={(e) => setResetPassword(e.target.value)}
+                                            className="w-full px-4 py-2.5 bg-surface border border-outline-variant rounded-lg text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all pr-10"
+                                            minLength={8}
+                                            placeholder="Minimum 8 characters"
+                                            autoFocus
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowResetPassword((prev) => !prev)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors focus:outline-none"
+                                        >
+                                            <span className="material-symbols-outlined text-[20px]">
+                                                {showResetPassword ? "visibility" : "visibility_off"}
+                                            </span>
+                                        </button>
+                                    </div>
+                                    {resetPassword && resetPassword.length < 8 && (
+                                        <p className="text-xs text-error flex items-center gap-1">
+                                            <span className="material-symbols-outlined text-[14px]">error</span>
+                                            Password must be at least 8 characters.
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="flex items-center justify-end gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => { setPasswordTarget(null); setResetPassword(""); setShowResetPassword(false); }}
+                                        disabled={isResettingPassword}
+                                        className="px-5 py-2.5 rounded-lg text-sm font-medium text-on-surface-variant hover:bg-surface-container-high transition-colors disabled:opacity-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={confirmResetPassword}
+                                        disabled={isResettingPassword || resetPassword.length < 8}
+                                        className="px-5 py-2.5 rounded-lg text-sm font-semibold bg-primary text-on-primary hover:bg-primary/90 transition-all flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
+                                    >
+                                        <span className="material-symbols-outlined text-[18px]">{isResettingPassword ? "progress_activity" : "lock_reset"}</span>
+                                        {isResettingPassword ? "Resetting..." : "Reset Password"}
                                     </button>
                                 </div>
                             </div>

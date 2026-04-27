@@ -8,8 +8,8 @@ const navItems = [
     { icon: "history", label: "Sent History", path: "/sent-history" },
     { icon: "group", label: "User Management", path: "/users", roles: ["super_admin"] },
     { icon: "badge", label: "Roles", path: "/roles", roles: ["super_admin"] },
-    { icon: "lock_reset", label: "Security", path: "/security", roles: ["super_admin"] },
     { icon: "electrical_services", label: "Provider", path: "/provider", roles: ["super_admin"] },
+    { icon: "person", label: "Profile", path: "/profile" },
 ];
 
 export default function Sidebar({ isOpen, onClose }) {

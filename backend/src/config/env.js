@@ -39,6 +39,12 @@ const env = {
   whatsappProvider: (process.env.WHATSAPP_PROVIDER || "fast2sms").toLowerCase(),
   fast2smsApiKey: process.env.FAST2SMS_API_KEY || "",
   fast2smsPhoneNumberId: process.env.FAST2SMS_PHONE_NUMBER_ID || "",
+  fast2smsApiVersion: process.env.FAST2SMS_API_VERSION || "v24.0",
+  fast2smsDefaultTemplate: process.env.FAST2SMS_DEFAULT_TEMPLATE || "",
+  fast2smsDefaultTemplateLang: process.env.FAST2SMS_DEFAULT_TEMPLATE_LANG || "en",
+  fast2smsTemplateHeaderVideoUrl: process.env.FAST2SMS_TEMPLATE_HEADER_VIDEO_URL || "",
+  redisHost: process.env.REDIS_HOST || "127.0.0.1",
+  redisPort: parseInteger(process.env.REDIS_PORT, 6379),
   defaultSuperAdminName: process.env.DEFAULT_SUPER_ADMIN_NAME || "Super Admin",
   defaultSuperAdminEmail: (
     process.env.DEFAULT_SUPER_ADMIN_EMAIL || "superadmin@gmail.com"

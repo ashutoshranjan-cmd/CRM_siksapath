@@ -49,7 +49,7 @@ export default function DashboardPage() {
         total: 0,
         sent: 0,
         failed: 0,
-        pending: 0,
+        queued: 0,
         recent: [],
     });
     const [isLoading, setIsLoading] = useState(true);
@@ -61,12 +61,12 @@ export default function DashboardPage() {
             setIsLoading(true);
 
             try {
-                const [totalResponse, sentResponse, failedResponse, pendingResponse, recentResponse] =
+                const [totalResponse, sentResponse, failedResponse, queuedResponse, recentResponse] =
                     await Promise.all([
                         messageApi.getHistory({ page: 1, limit: 1 }, token),
                         messageApi.getHistory({ page: 1, limit: 1, status: "sent" }, token),
                         messageApi.getHistory({ page: 1, limit: 1, status: "failed" }, token),
-                        messageApi.getHistory({ page: 1, limit: 1, status: "pending" }, token),
+                        messageApi.getHistory({ page: 1, limit: 1, status: "queued" }, token),
                         messageApi.getHistory({ page: 1, limit: 5 }, token),
                     ]);
 
@@ -78,7 +78,7 @@ export default function DashboardPage() {
                     total: totalResponse.data.pagination.total,
                     sent: sentResponse.data.pagination.total,
                     failed: failedResponse.data.pagination.total,
-                    pending: pendingResponse.data.pagination.total,
+                    queued: queuedResponse.data.pagination.total,
                     recent: recentResponse.data.history,
                 });
             } catch (error) {
@@ -231,7 +231,9 @@ export default function DashboardPage() {
                                                 ? "bg-secondary/10 text-secondary"
                                                 : entry.status === "failed"
                                                     ? "bg-error-container text-error"
-                                                    : "bg-primary/10 text-primary"
+                                                    : entry.status === "queued"
+                                                        ? "text-[#b45309]"
+                                                        : "bg-primary/10 text-primary"
                                                 }`}
                                         >
                                             {entry.status}
@@ -253,13 +255,13 @@ export default function DashboardPage() {
                     <div className="p-6 space-y-5">
                         <div className="rounded-xl border border-outline-variant bg-surface p-4">
                             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
-                                Pending Messages
+                                Queued Messages
                             </p>
                             {isLoading ? (
                                 <div className="h-7 w-12 bg-surface-variant rounded mt-2 animate-pulse" />
                             ) : (
                                 <p className="text-[24px] font-semibold text-on-surface mt-2">
-                                    {overview.pending}
+                                    {overview.queued}
                                 </p>
                             )}
                         </div>
