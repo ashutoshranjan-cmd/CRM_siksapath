@@ -1,14 +1,12 @@
 const app = require("./src/app");
 const env = require("./src/config/env");
-const connectDatabase = require("./src/config/database");
-const ensureDefaultSuperAdmin = require("./src/services/bootstrap.service");
+const { initializeRuntime } = require("./src/bootstrap/runtime");
 const { startWhatsappWorker } = require("./src/queues/whatsapp.worker");
 const mongoose = require("mongoose");
 
 async function startServer() {
   try {
-    await connectDatabase();
-    await ensureDefaultSuperAdmin();
+    await initializeRuntime();
 
     // Start the BullMQ WhatsApp worker so queued messages get processed
     const worker = startWhatsappWorker();
