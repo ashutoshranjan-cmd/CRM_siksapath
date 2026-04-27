@@ -3,6 +3,7 @@ const express = require("express");
 const helmet = require("helmet");
 
 const env = require("./config/env");
+const { ensureRuntimeReady } = require("./bootstrap/runtime");
 const { apiLimiter, authLimiter } = require("./middlewares/rateLimit.middleware");
 const { errorHandler, notFoundHandler } = require("./middlewares/error.middleware");
 const sanitizeRequest = require("./middlewares/sanitize.middleware");
@@ -28,6 +29,7 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: env.bodyLimit }));
 app.use(express.urlencoded({ extended: true, limit: env.bodyLimit }));
 app.use(sanitizeRequest);
+app.use(ensureRuntimeReady);
 app.use("/api", apiLimiter);
 app.use("/api/auth", authLimiter);
 
